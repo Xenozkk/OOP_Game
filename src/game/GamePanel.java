@@ -161,27 +161,31 @@ public class GamePanel extends JPanel implements Runnable {
         int spawnRate = WaveManager.getSpawnInterval(currentWave);
 
         if (frameCount >= spawnRate) {
-            int spawnX = random.nextBoolean()
-                ? -40
-                : SCREEN_WIDTH + 40;
-
-            int spawnY = random.nextInt(SCREEN_HEIGHT);
-
-            Enemy.Type type = WaveManager.getRandomType(
+            Enemy.Type type = WaveManager.getRandomAvailableType(
                 currentWave,
-                random
+                random,
+                enemies
             );
+            if (type != null) {
 
-            Enemy newEnemy = new Enemy(
-                spawnX,
-                spawnY,
-                player,
-                type,
-                currentWave
-            );
+                int spawnX = random.nextBoolean()
+                    ? -40
+                    : SCREEN_WIDTH + 40;
+                
+                int spawnY = random.nextInt(SCREEN_HEIGHT);
 
-            enemies.add(newEnemy);
-            frameCount = 0;
+                Enemy newEnemy = new Enemy(
+                    spawnX,
+                    spawnY,
+                    player,
+                    type,
+                    currentWave
+                );
+
+                enemies.add(newEnemy);
+
+                frameCount = 0;
+            }
         }
 
         // --------------------------------------------------

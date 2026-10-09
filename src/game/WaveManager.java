@@ -1,54 +1,154 @@
+
 package game;
 
+import java.util.ArrayList;
 import java.util.Random;
+
 import entities.Enemy;
 
 public class WaveManager {
 
+    private static final Enemy.Type[] ALL_TYPES = Enemy.Type.values();
+
+    // เวลารอระหว่างการเกิดศัตรู หน่วยเป็น frame ที่ 60 FPS
     public static int getSpawnInterval(int wave) {
-        // ยิ่ง Wave สูง ศัตรูยิ่งเกิดถี่ขึ้น
-        return Math.max(12, 60 - (wave * 4));
+        if (wave <= 1) return 60;
+        if (wave == 2) return 54;
+        if (wave == 3) return 51;
+        if (wave == 4) return 48;
+        if (wave == 5) return 45;
+        if (wave == 6) return 42;
+        if (wave == 7) return 39;
+        if (wave == 8) return 36;
+        if (wave == 9) return 33;
+
+        return 30; // Wave 10 เป็นต้นไป
     }
 
-    public static Enemy.Type getRandomType(int wave, Random random) {
-        Enemy.Type[] types;
+    // จำนวนศัตรูแต่ละประเภทที่มีชีวิตพร้อมกันได้สูงสุด
+    // คืนค่า 0 หมายถึงยังไม่ปลดล็อกใน Wave นั้น
+    public static int getMaxAlive(Enemy.Type type, int wave) {
+        switch (type) {
+            case CHASER:
+                return 8;
 
+            case RUNNER:
+                return wave >= 3 ? 4 : 0;
+
+            case SHOOTER:
+                return wave >= 3 ? 3 : 0;
+
+            case TANK:
+                return wave >= 4 ? 3 : 0;
+
+            case BRUTE:
+                return wave >= 6 ? 2 : 0;
+
+            default:
+                return 0;
+        }
+    }
+
+    // นับจำนวนศัตรูที่ยังมีชีวิตแยกตามประเภท
+    private static int countAlive(
+            Enemy.Type type,
+            ArrayList<Enemy> enemies) {
+
+        int count = 0;
+
+        for (Enemy enemy : enemies) {
+            if (enemy.getHp() > 0 && enemy.getType() == type) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    // เลือกศัตรูที่ยังมีช่องว่างให้เกิดได้
+    // ถ้าประเภทใน pool เต็ม จะลองเลือกประเภทอื่น
+    // ถ้าทุกประเภทเต็ม จะคืนค่า null เพื่อให้ GamePanel รอ
+    public static Enemy.Type getRandomAvailableType(
+            int wave,
+            Random random,
+            ArrayList<Enemy> enemies) {
+
+        ArrayList<Enemy.Type> weightedPool = new ArrayList<>();
+
+        // คงโอกาสสุ่มของประเภทศัตรูตามระบบเดิม
+        Enemy.Type[] originalPool = getSpawnPool(wave);
+
+        for (Enemy.Type type : originalPool) {
+            int maxAlive = getMaxAlive(type, wave);
+            int alive = countAlive(type, enemies);
+
+            if (maxAlive > 0 && alive < maxAlive) {
+                weightedPool.add(type);
+            }
+        }
+
+        // ถ้ายังมีประเภทใน pool ที่เกิดได้ ให้สุ่มจาก pool นั้น
+        if (!weightedPool.isEmpty()) {
+            return weightedPool.get(random.nextInt(weightedPool.size()));
+        }
+
+        // ถ้าประเภทใน pool เต็มหมด ให้ลองประเภทอื่นที่ปลดล็อกแล้ว
+        ArrayList<Enemy.Type> fallbackPool = new ArrayList<>();
+
+        for (Enemy.Type type : ALL_TYPES) {
+            int maxAlive = getMaxAlive(type, wave);
+            int alive = countAlive(type, enemies);
+
+            if (maxAlive > 0 && alive < maxAlive) {
+                fallbackPool.add(type);
+            }
+        }
+
+        if (fallbackPool.isEmpty()) {
+            return null;
+        }
+
+        return fallbackPool.get(random.nextInt(fallbackPool.size()));
+    }
+
+    // รายชื่อประเภทและน้ำหนักการสุ่มตามระบบเดิม
+    private static Enemy.Type[] getSpawnPool(int wave) {
         if (wave <= 1) {
-            types = new Enemy.Type[] {
+            return new Enemy.Type[] {
                 Enemy.Type.CHASER
             };
         } else if (wave == 2) {
-            types = new Enemy.Type[] {
+            return new Enemy.Type[] {
                 Enemy.Type.CHASER,
                 Enemy.Type.CHASER
             };
         } else if (wave == 3) {
-            types = new Enemy.Type[] {
+            return new Enemy.Type[] {
                 Enemy.Type.CHASER,
                 Enemy.Type.CHASER,
                 Enemy.Type.RUNNER
             };
         } else if (wave == 4) {
-            types = new Enemy.Type[] {
+            return new Enemy.Type[] {
                 Enemy.Type.CHASER,
                 Enemy.Type.CHASER,
                 Enemy.Type.SHOOTER
             };
         } else if (wave == 5) {
-            types = new Enemy.Type[] {
+            return new Enemy.Type[] {
                 Enemy.Type.CHASER,
                 Enemy.Type.SHOOTER,
                 Enemy.Type.TANK
             };
         } else if (wave == 6) {
-            types = new Enemy.Type[] {
+            return new Enemy.Type[] {
                 Enemy.Type.RUNNER,
                 Enemy.Type.RUNNER,
                 Enemy.Type.SHOOTER,
                 Enemy.Type.TANK
             };
         } else if (wave == 7) {
-            types = new Enemy.Type[] {
+            return new Enemy.Type[] {
                 Enemy.Type.CHASER,
                 Enemy.Type.RUNNER,
                 Enemy.Type.SHOOTER,
@@ -56,36 +156,22 @@ public class WaveManager {
                 Enemy.Type.BRUTE
             };
         } else if (wave == 8) {
-            types = new Enemy.Type[] {
+            return new Enemy.Type[] {
                 Enemy.Type.TANK,
                 Enemy.Type.TANK,
                 Enemy.Type.BRUTE,
                 Enemy.Type.SHOOTER
             };
-        } else if (wave == 9) {
-            types = new Enemy.Type[] {
-                Enemy.Type.CHASER,
-                Enemy.Type.RUNNER,
-                Enemy.Type.RUNNER,
-                Enemy.Type.SHOOTER,
-                Enemy.Type.TANK,
-                Enemy.Type.BRUTE,
-                Enemy.Type.BRUTE
-            };
-        } else {
-            // Wave 10 เป็นต้นไป: ศัตรูทุกชนิด
-            // เพิ่มโอกาสเกิด Runner และ Brute
-            types = new Enemy.Type[] {
-                Enemy.Type.CHASER,
-                Enemy.Type.RUNNER,
-                Enemy.Type.RUNNER,
-                Enemy.Type.SHOOTER,
-                Enemy.Type.TANK,
-                Enemy.Type.BRUTE,
-                Enemy.Type.BRUTE
-            };
         }
 
-        return types[random.nextInt(types.length)];
+        return new Enemy.Type[] {
+            Enemy.Type.CHASER,
+            Enemy.Type.RUNNER,
+            Enemy.Type.RUNNER,
+            Enemy.Type.SHOOTER,
+            Enemy.Type.TANK,
+            Enemy.Type.BRUTE,
+            Enemy.Type.BRUTE
+        };
     }
 }
