@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 
 public class Enemy extends Entity {
-    private Player player; // ต้องรู้พิกัดผู้เล่นเพื่อเดินตาม
+    private final Player player; // ต้องรู้พิกัดผู้เล่นเพื่อเดินตาม
 
     public Enemy(float x, float y, Player player) {
         // ให้ศัตรูขนาด 30x30 เลือด 10 ความเร็ว 1.5

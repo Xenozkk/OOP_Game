@@ -25,7 +25,6 @@ public class Pistol extends Weapon {
 
     private static final int GUN_W = 52;
     private static final int GUN_H = 32;
-    private static final int GUN_OFFSET_X = 40;
 
     public ArrayList<Projectile> bullets = new ArrayList<>();
 
