@@ -8,66 +8,67 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
+import javax.swing.JPanel;
 
 import entities.Enemy;
+import entities.EnemyProjectile;
 import entities.MaterialItem;
 import entities.Player;
 import items.ShopItem;
 import stats.PlayerStats;
-import javax.swing.JPanel;
-import entities.Player;
-import entities.Enemy;
-import entities.MaterialItem;
-import stats.PlayerStats;
 
 public class GamePanel extends JPanel implements Runnable {
-    
+
     public final int SCREEN_WIDTH = 800;
     public final int SCREEN_HEIGHT = 600;
-    int FPS = 60;
+    final int FPS = 60;
+
     Thread gameThread;
-    
-    // ตั้งให้เกมเริ่มที่หน้า TITLE แทน PLAYING
-    public GameState currentState = GameState.TITLE; 
-    
-    // ระบบรับ input
+
+    public GameState currentState = GameState.TITLE;
+
     KeyHandler keyH;
     MouseHandler mouseH;
-    
-    // สิ่งต่างๆ ในเกม
+
     Player player;
+
     ArrayList<Enemy> enemies = new ArrayList<>();
-    ArrayList<MaterialItem> materials = new ArrayList<>(); // ลิสต์เก็บเงินบนพื้น
+    ArrayList<MaterialItem> materials = new ArrayList<>();
+
     int frameCount = 0;
     Random random = new Random();
-    
-    // ระบบ Wave และร้านค้า
+
+    // Wave system
+    public static final int MAX_WAVE = 10;
     public int currentWave = 1;
-    public int waveTimer = 30 * FPS; // 30 วินาที
+    public int waveTimer = 30 * FPS;
+
     public ShopManager shop = new ShopManager();
-    
-    // ตัวแปรเก็บค่าการเลือกจากหน้าต่างเมนู
+
     public int selectedChar = 0;
     public int selectedWeapon = 0;
 
     public GamePanel() {
-        this.setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
-        this.setBackground(Color.DARK_GRAY); 
-        this.setDoubleBuffered(true);
-        
+        setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        setBackground(Color.DARK_GRAY);
+        setDoubleBuffered(true);
+
         keyH = new KeyHandler(this);
-        this.addKeyListener(keyH);
-        
+        addKeyListener(keyH);
+
         mouseH = new MouseHandler(this);
-        this.addMouseListener(mouseH);
-        
-        this.setFocusable(true); 
+        addMouseListener(mouseH);
+
+        setFocusable(true);
     }
-    
-    // ฟังก์ชันสร้างตัวละครหลังจากเลือกเสร็จ
+
+    // --------------------------------------------------
+    // Setup
+    // --------------------------------------------------
+
     public void setupGame() {
         PlayerStats initialStats = new PlayerStats();
-        
+
         if (selectedChar == 1) {
             initialStats.setMaxHp(20);
             initialStats.setMoveSpeed(2.0f);
@@ -75,23 +76,30 @@ public class GamePanel extends JPanel implements Runnable {
             initialStats.setMaxHp(5);
             initialStats.setMoveSpeed(5.0f);
         }
-        
-        player = new Player(this, SCREEN_WIDTH/2 - 20, SCREEN_HEIGHT/2 - 20, initialStats, keyH);
-        
-        // ติดอาวุธตามที่เลือก
+
+        player = new Player(
+            this,
+            SCREEN_WIDTH / 2 - 20,
+            SCREEN_HEIGHT / 2 - 20,
+            initialStats,
+            keyH
+        );
+
+        // เลือกอาวุธตามที่ผู้เล่นเลือก
         if (selectedWeapon == 1) {
             player.addWeapon(new weapons.Sword());
         } else if (selectedWeapon == 2) {
             player.addWeapon(new weapons.Pistol());
         }
-        
+
         enemies.clear();
         materials.clear();
+
         frameCount = 0;
         currentWave = 1;
         waveTimer = 30 * FPS;
     }
-    
+
     public void startGameThread() {
         gameThread = new Thread(this);
         gameThread.start();
@@ -99,147 +107,284 @@ public class GamePanel extends JPanel implements Runnable {
 
     @Override
     public void run() {
-        double drawInterval = 1000000000 / FPS; 
+        double drawInterval = 1000000000.0 / FPS;
         double delta = 0;
-        long lastTime = System.nanoTime();
-        long currentTime;
 
-        while(gameThread != null) {
-            currentTime = System.nanoTime();
+        long lastTime = System.nanoTime();
+
+        while (gameThread != null) {
+            long currentTime = System.nanoTime();
+
             delta += (currentTime - lastTime) / drawInterval;
             lastTime = currentTime;
 
-            if(delta >= 1) {
+            if (delta >= 1) {
                 update();
-                repaint(); 
+                repaint();
                 delta--;
             }
         }
     }
-    
+
+    // --------------------------------------------------
+    // Update game
+    // --------------------------------------------------
+
     public void update() {
-        if (currentState == GameState.PLAYING) {
-            
-            // --- นับเวลา Wave ---
-            waveTimer--;
-            if (waveTimer <= 0) {
-                // จบเวฟ
-                currentState = GameState.SHOP;
-                enemies.clear();
-                
-                // ดูดเงินทั้งหมดบนพื้นเข้ากระเป๋าทันทีเป็นรางวัลจบเวฟ
-                for (MaterialItem m : materials) {
-                    player.getStats().addMaterials(m.getValue());
-                }
-                materials.clear();
-                
-                // รีเซ็ตร้านค้า สุ่มของใหม่ฟรี 1 รอบ
-                shop.startNewWaveShop();
-                return;
+        if (currentState != GameState.PLAYING) {
+            return;
+        }
+
+        if (player == null) {
+            return;
+        }
+
+        // ตรวจสอบว่าเวลาของ Wave หมดหรือยัง
+        waveTimer--;
+
+        if (waveTimer <= 0) {
+            waveTimer = 0;
+            finishWave();
+            return;
+        }
+
+        // อัปเดตผู้เล่นและอาวุธ
+        player.update();
+        player.updateWeapons(enemies);
+
+        // --------------------------------------------------
+        // Spawn enemies using WaveManager
+        // --------------------------------------------------
+
+        frameCount++;
+
+        int spawnRate = WaveManager.getSpawnInterval(currentWave);
+
+        if (frameCount >= spawnRate) {
+            int spawnX = random.nextBoolean()
+                ? -40
+                : SCREEN_WIDTH + 40;
+
+            int spawnY = random.nextInt(SCREEN_HEIGHT);
+
+            Enemy.Type type = WaveManager.getRandomType(
+                currentWave,
+                random
+            );
+
+            Enemy newEnemy = new Enemy(
+                spawnX,
+                spawnY,
+                player,
+                type,
+                currentWave
+            );
+
+            enemies.add(newEnemy);
+            frameCount = 0;
+        }
+
+        // --------------------------------------------------
+        // Update enemies and check collisions
+        // --------------------------------------------------
+
+        Iterator<Enemy> enemyIterator = enemies.iterator();
+
+        while (enemyIterator.hasNext()) {
+            Enemy enemy = enemyIterator.next();
+
+            enemy.update();
+
+            enemy.updateProjectiles(
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT
+            );
+
+            // ตรวจสอบการชนระหว่างผู้เล่นกับศัตรู
+            boolean isColliding =
+                player.getX() < enemy.getX() + enemy.getWidth()
+                && player.getX() + player.getWidth() > enemy.getX()
+                && player.getY() < enemy.getY() + enemy.getHeight()
+                && player.getY() + player.getHeight() > enemy.getY();
+
+            if (isColliding) {
+                player.takeDamage(enemy.getContactDamage());
             }
 
-            player.update();
-            player.updateWeapons(enemies); // อัปเดตอาวุธและกระสุนทุกเฟรม
-            
-            frameCount++;
-            // ศัตรูเกิดไวขึ้นเมื่อเวฟสูงขึ้น
-            int spawnRate = Math.max(10, 60 - (currentWave * 5)); 
-            if (frameCount >= spawnRate) {
-                int spawnX = random.nextBoolean() ? -40 : SCREEN_WIDTH + 40; // เกิดนอกจอ
-                int spawnY = random.nextInt(SCREEN_HEIGHT);
-                
-                // สร้างศัตรู เลือดเยอะขึ้นตามเวฟ
-                Enemy newEnemy = new Enemy(spawnX, spawnY, player);
-                // สมมติ: ถ้ามี setter เลือด ก็ใช้เพิ่มเลือดศัตรูได้ (เดี๋ยวทำทีหลังถ้าต้องการ)
-                
-                enemies.add(newEnemy);
-                frameCount = 0;
-            }
-            
-            Iterator<Enemy> it = enemies.iterator();
-            while (it.hasNext()) {
-                Enemy e = it.next();
-                e.update();
-                boolean isColliding = player.getX() < e.getX() + e.getWidth() &&
-                                      player.getX() + player.getWidth() > e.getX() &&
-                                      player.getY() < e.getY() + e.getHeight() &&
-                                      player.getY() + player.getHeight() > e.getY();
-                if (isColliding) {
-                    player.takeDamage(1); 
-                }
-                if (e.getHp() <= 0) {
-                    // ดรอปเงินเมื่อศัตรูตาย
-                    materials.add(new MaterialItem(e.getX() + e.getWidth()/2, e.getY() + e.getHeight()/2, 1));
-                    it.remove();
+            // ตรวจสอบกระสุนของ Shooter ที่ชนผู้เล่น
+            Iterator<EnemyProjectile> bulletIterator =
+                enemy.getProjectiles().iterator();
+
+            while (bulletIterator.hasNext()) {
+                EnemyProjectile bullet = bulletIterator.next();
+
+                boolean hitPlayer =
+                    bullet.getX() >= player.getX()
+                    && bullet.getX() <= player.getX() + player.getWidth()
+                    && bullet.getY() >= player.getY()
+                    && bullet.getY() <= player.getY() + player.getHeight();
+
+                if (hitPlayer) {
+                    player.takeDamage(bullet.getDamage());
+                    bulletIterator.remove();
                 }
             }
-            
-            // --- ระบบจัดการเงิน (Materials) ---
-            Iterator<MaterialItem> matIt = materials.iterator();
-            while (matIt.hasNext()) {
-                MaterialItem mat = matIt.next();
-                mat.update();
-                
-                // หาพิกัดตรงกลาง
-                float px = player.getX() + player.getWidth() / 2;
-                float py = player.getY() + player.getHeight() / 2;
-                float mx = mat.getX() + mat.getWidth() / 2;
-                float my = mat.getY() + mat.getHeight() / 2;
-                
-                float dx = px - mx;
-                float dy = py - my;
-                float dist = (float) Math.sqrt(dx * dx + dy * dy);
-                
-                // ถ้าระยะห่างน้อยกว่า Pickup Range ให้เริ่มดูด
-                if (dist < player.getStats().getPickupRange()) {
-                    mat.magnetize(player);
-                }
-                
-                // ถ้าใกล้มาก (ชนแล้ว) ให้เก็บเงิน
-                if (dist < 15) {
-                    player.getStats().addMaterials(mat.getValue());
-                    matIt.remove();
-                }
+
+            // ศัตรูตายแล้วดรอป Materials
+            if (enemy.getHp() <= 0) {
+                materials.add(
+                    new MaterialItem(
+                        enemy.getX() + enemy.getWidth() / 2,
+                        enemy.getY() + enemy.getHeight() / 2,
+                        1
+                    )
+                );
+
+                enemyIterator.remove();
+            }
+        }
+
+        // --------------------------------------------------
+        // Materials system
+        // --------------------------------------------------
+
+        Iterator<MaterialItem> materialIterator =
+            materials.iterator();
+
+        while (materialIterator.hasNext()) {
+            MaterialItem material = materialIterator.next();
+
+            material.update();
+
+            float playerX =
+                player.getX() + player.getWidth() / 2.0f;
+
+            float playerY =
+                player.getY() + player.getHeight() / 2.0f;
+
+            float materialX =
+                material.getX() + material.getWidth() / 2.0f;
+
+            float materialY =
+                material.getY() + material.getHeight() / 2.0f;
+
+            float dx = playerX - materialX;
+            float dy = playerY - materialY;
+
+            float distance =
+                (float) Math.sqrt(dx * dx + dy * dy);
+
+            // ดูด Materials เมื่ออยู่ในระยะเก็บ
+            if (distance < player.getStats().getPickupRange()) {
+                material.magnetize(player);
+            }
+
+            // เก็บ Materials
+            if (distance < 15) {
+                player.getStats().addMaterials(material.getValue());
+                materialIterator.remove();
             }
         }
     }
-    
+
+    // --------------------------------------------------
+    // Finish Wave
+    // --------------------------------------------------
+
+    private void finishWave() {
+        currentState = GameState.SHOP;
+
+        enemies.clear();
+
+        // รับ Materials ที่ยังเหลืออยู่เป็นรางวัล
+        for (MaterialItem material : materials) {
+            player.getStats().addMaterials(material.getValue());
+        }
+
+        materials.clear();
+
+        // สุ่มไอเทมร้านค้าสำหรับรอบใหม่
+        shop.startNewWaveShop();
+    }
+
+    // เรียกจาก MouseHandler เมื่อกด Next Wave
+    public void nextWave() {
+        if (currentWave >= MAX_WAVE) {
+            currentState = GameState.GAME_OVER;
+            return;
+        }
+
+        currentWave++;
+        waveTimer = 30 * FPS;
+        frameCount = 0;
+
+        currentState = GameState.PLAYING;
+    }
+
+    // --------------------------------------------------
+    // Render
+    // --------------------------------------------------
+
     @Override
     public void paintComponent(Graphics g) {
-        super.paintComponent(g); 
-        Graphics2D g2d = (Graphics2D) g; // แปลงเป็น Graphics2D เพื่อให้รองรับการ Rotate
-        
+        super.paintComponent(g);
+
+        Graphics2D g2d = (Graphics2D) g.create();
+
         if (currentState == GameState.TITLE) {
-            drawTitleScreen(g);
+            drawTitleScreen(g2d);
+
         } else if (currentState == GameState.CHAR_SELECT) {
-            drawCharSelectScreen(g);
+            drawCharSelectScreen(g2d);
+
         } else if (currentState == GameState.WEAPON_SELECT) {
-            drawWeaponSelectScreen(g);
+            drawWeaponSelectScreen(g2d);
+
         } else if (currentState == GameState.SHOP) {
-            drawShopScreen(g);
+            drawShopScreen(g2d);
+
         } else {
-            for (Enemy e : enemies) { e.render(g); }
-            for (MaterialItem m : materials) { m.render(g); } // วาดเงิน
-            if (player != null) { 
-                player.render(g);          // วาดตัวผู้เล่น
-                player.renderWeapons(g2d); // วาดอาวุธรอบๆ ผู้เล่น (พร้อม Animation หมุน/Recoil)
+            // วาดศัตรูและกระสุนของ Shooter
+            for (Enemy enemy : enemies) {
+                enemy.render(g2d);
+
+                for (EnemyProjectile bullet : enemy.getProjectiles()) {
+                    bullet.render(g2d);
+                }
             }
-            
-            drawHUD(g);
-            
+
+            // วาด Materials
+            for (MaterialItem material : materials) {
+                material.render(g2d);
+            }
+
+            // วาดผู้เล่นและอาวุธ
+            if (player != null) {
+                player.render(g2d);
+                player.renderWeapons(g2d);
+            }
+
+            drawHUD(g2d);
+
             if (currentState == GameState.PAUSED) {
-                drawPauseScreen(g);
+                drawPauseScreen(g2d);
+
             } else if (currentState == GameState.GAME_OVER) {
-                drawGameOverScreen(g);
+                drawGameOverScreen(g2d);
             }
         }
-        g.dispose(); 
+
+        g2d.dispose();
     }
-    
-    // --- ฟังก์ชันวาดเมนูก่อนเล่น (Mock up) ---
+
+    // --------------------------------------------------
+    // Menu screens
+    // --------------------------------------------------
+
     private void drawBackButton(Graphics g) {
         g.setColor(Color.LIGHT_GRAY);
         g.fillRect(20, 20, 80, 40);
+
         g.setColor(Color.BLACK);
         g.setFont(new Font("Arial", Font.BOLD, 16));
         g.drawString("BACK", 35, 45);
@@ -249,223 +394,347 @@ public class GamePanel extends JPanel implements Runnable {
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 60));
         g.drawString("BROTATO CLONE", 140, 250);
-        
-        // ปุ่ม Start
+
         g.setColor(Color.GRAY);
         g.fillRect(300, 400, 200, 50);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 30));
         g.drawString("START", 350, 435);
     }
-    
+
     private void drawCharSelectScreen(Graphics g) {
-        drawBackButton(g); // วาดปุ่ม Back
-        
+        drawBackButton(g);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 40));
         g.drawString("Select Character", 240, 150);
-        
-        // กล่อง 1: Tank
+
+        // Tank
         g.setColor(Color.GRAY);
         g.fillRect(150, 250, 200, 200);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("TANK", 210, 290);
+
         g.setFont(new Font("Arial", Font.PLAIN, 16));
         g.drawString("HP: 20", 220, 340);
         g.drawString("Speed: Slow", 200, 370);
-        
-        // กล่อง 2: Speedy
+
+        // Speedy
         g.setColor(Color.GRAY);
         g.fillRect(450, 250, 200, 200);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("SPEEDY", 500, 290);
+
         g.setFont(new Font("Arial", Font.PLAIN, 16));
         g.drawString("HP: 5", 530, 340);
         g.drawString("Speed: Fast", 510, 370);
     }
 
     private void drawWeaponSelectScreen(Graphics g) {
-        drawBackButton(g); // วาดปุ่ม Back
-        
+        drawBackButton(g);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 40));
         g.drawString("Select Weapon", 260, 150);
-        
-        // กล่อง 1: Melee
+
+        // Sword
         g.setColor(Color.DARK_GRAY);
         g.fillRect(150, 250, 200, 200);
+
         g.setColor(Color.ORANGE);
         g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("SWORD", 200, 290);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 16));
         g.drawString("Type: Melee", 205, 340);
-        
-        // กล่อง 2: Ranged
+
+        // Pistol
         g.setColor(Color.DARK_GRAY);
         g.fillRect(450, 250, 200, 200);
+
         g.setColor(Color.CYAN);
         g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("PISTOL", 505, 290);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 16));
         g.drawString("Type: Ranged", 500, 340);
     }
-    
-    // --- ฟังก์ชันวาด UI ระหว่างเล่น ---
+
+    // --------------------------------------------------
+    // HUD
+    // --------------------------------------------------
+
     private void drawHUD(Graphics g) {
-        if(player == null) return;
-        int barX = 20, barY = 20, barWidth = 200, barHeight = 25;
+        if (player == null) {
+            return;
+        }
+
+        int barX = 20;
+        int barY = 20;
+        int barWidth = 200;
+        int barHeight = 25;
+
+        // HP bar background
         g.setColor(Color.DARK_GRAY);
         g.fillRect(barX, barY, barWidth, barHeight);
-        
+
+        // HP bar
         g.setColor(new Color(200, 50, 50));
-        double hpRatio = (double) player.getHp() / player.getMaxHp();
-        if (hpRatio < 0) hpRatio = 0;
-        int hpWidth = (int)(barWidth * hpRatio);
+
+        double hpRatio =
+            (double) player.getHp() / player.getMaxHp();
+
+        hpRatio = Math.max(0, Math.min(1, hpRatio));
+
+        int hpWidth = (int) (barWidth * hpRatio);
+
         g.fillRect(barX, barY, hpWidth, barHeight);
-        
+
         g.setColor(Color.WHITE);
         g.drawRect(barX, barY, barWidth, barHeight);
-        
+
         g.setFont(new Font("Arial", Font.BOLD, 14));
-        g.drawString("HP: " + player.getHp() + " / " + player.getMaxHp(), barX + 60, barY + 18);
-        
-        // วาดจำนวนเงิน
+        g.drawString(
+            "HP: " + player.getHp() + " / " + player.getMaxHp(),
+            barX + 60,
+            barY + 18
+        );
+
+        // Materials
         g.setColor(new Color(50, 220, 80));
-        g.drawString("Materials: " + player.getStats().getMaterials(), barX, barY + 45);
-        
-        // วาด Wave และ Timer ตรงกลางบน
+        g.drawString(
+            "Materials: " + player.getStats().getMaterials(),
+            barX,
+            barY + 45
+        );
+
+        // Wave and timer
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 24));
-        String waveText = "Wave " + currentWave;
+
+        g.drawString(
+            "Wave " + currentWave + " / " + MAX_WAVE,
+            SCREEN_WIDTH / 2 - 75,
+            30
+        );
+
         int timeSeconds = waveTimer / FPS;
-        String timeText = "Time: " + timeSeconds;
-        g.drawString(waveText, SCREEN_WIDTH/2 - 40, 30);
-        g.drawString(timeText, SCREEN_WIDTH/2 - 45, 60);
+
+        g.drawString(
+            "Time: " + timeSeconds,
+            SCREEN_WIDTH / 2 - 45,
+            60
+        );
     }
-    
+
+    // --------------------------------------------------
+    // Pause screen
+    // --------------------------------------------------
+
     private void drawPauseScreen(Graphics g) {
-        g.setColor(new Color(0, 0, 0, 150)); 
+        g.setColor(new Color(0, 0, 0, 150));
         g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 48));
-        g.drawString("PAUSED", SCREEN_WIDTH/2 - 90, 200);
-        
-        // ปุ่ม Resume
-        g.setColor(Color.GRAY); g.fillRect(300, 300, 200, 50);
-        g.setColor(Color.WHITE); g.setFont(new Font("Arial", Font.BOLD, 24));
+        g.drawString("PAUSED", SCREEN_WIDTH / 2 - 90, 200);
+
+        // Resume
+        g.setColor(Color.GRAY);
+        g.fillRect(300, 300, 200, 50);
+
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("Resume", 355, 335);
-        
-        // ปุ่ม Restart
-        g.setColor(Color.GRAY); g.fillRect(300, 370, 200, 50);
-        g.setColor(Color.WHITE); g.drawString("Restart", 360, 405);
-        
-        // ปุ่ม Main Menu
-        g.setColor(Color.GRAY); g.fillRect(300, 440, 200, 50);
-        g.setColor(Color.WHITE); g.drawString("Main Menu", 335, 475);
+
+        // Restart
+        g.setColor(Color.GRAY);
+        g.fillRect(300, 370, 200, 50);
+
+        g.setColor(Color.WHITE);
+        g.drawString("Restart", 360, 405);
+
+        // Main Menu
+        g.setColor(Color.GRAY);
+        g.fillRect(300, 440, 200, 50);
+
+        g.setColor(Color.WHITE);
+        g.drawString("Main Menu", 335, 475);
     }
-    
+
+    // --------------------------------------------------
+    // Game Over / Victory screen
+    // --------------------------------------------------
+
     private void drawGameOverScreen(Graphics g) {
-        g.setColor(new Color(150, 0, 0, 150)); 
+        boolean won =
+            currentWave >= MAX_WAVE
+            && player != null
+            && player.getHp() > 0;
+
+        if (won) {
+            g.setColor(new Color(0, 100, 0, 180));
+        } else {
+            g.setColor(new Color(150, 0, 0, 150));
+        }
+
         g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 48));
-        g.drawString("GAME OVER", SCREEN_WIDTH/2 - 130, 250);
-        
-        // ปุ่ม Restart (เล่นใหม่ตัวเดิม)
+
+        if (won) {
+            g.drawString(
+                "YOU WIN!",
+                SCREEN_WIDTH / 2 - 110,
+                250
+            );
+        } else {
+            g.drawString(
+                "GAME OVER",
+                SCREEN_WIDTH / 2 - 130,
+                250
+            );
+        }
+
+        // Restart
         g.setColor(Color.GRAY);
         g.fillRect(180, 400, 200, 50);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("Restart", 240, 435);
-        
-        // ปุ่ม Main Menu
+
+        // Main Menu
         g.setColor(Color.GRAY);
         g.fillRect(420, 400, 200, 50);
+
         g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("Main Menu", 455, 435);
     }
-    
+
+    // --------------------------------------------------
+    // Shop screen
+    // --------------------------------------------------
+
     private void drawShopScreen(Graphics g) {
-        // พื้นหลังร้านค้า
         g.setColor(new Color(30, 40, 50));
         g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-        
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 40));
-        g.drawString("SHOP - Wave " + currentWave + " Cleared!", 150, 80);
-        
+        g.drawString(
+            "SHOP - Wave " + currentWave + " Cleared!",
+            150,
+            80
+        );
+
         g.setFont(new Font("Arial", Font.BOLD, 24));
         g.setColor(new Color(50, 220, 80));
-        g.drawString("Your Materials: " + player.getStats().getMaterials(), 300, 130);
-        
-        // วาดไอเทม 3 สล็อต
+
+        g.drawString(
+            "Your Materials: " + player.getStats().getMaterials(),
+            300,
+            130
+        );
+
         ShopItem[] items = shop.getCurrentItems();
+
         int startX = 70;
         int gap = 30;
         int width = 200;
-        
+
         for (int i = 0; i < items.length; i++) {
             ShopItem item = items[i];
+
             int x = startX + (i * (width + gap));
             int y = 180;
-            
+
             if (item != null) {
-                // กล่องไอเทม
+                // Item box
                 g.setColor(Color.DARK_GRAY);
                 g.fillRect(x, y, width, 200);
-                
-                // ชื่อไอเทม
+
+                // Item name
                 g.setColor(Color.WHITE);
                 g.setFont(new Font("Arial", Font.BOLD, 18));
                 g.drawString(item.getName(), x + 15, y + 40);
-                
-                // คำอธิบาย
+
+                // Item description
                 g.setFont(new Font("Arial", Font.PLAIN, 14));
                 g.setColor(Color.LIGHT_GRAY);
-                // ตัดคำง่ายๆ ด้วยการแยกด้วยลูกน้ำ (ในของจริงอาจเขียนฟังก์ชันวาด Text หลายบรรทัด)
-                String[] descParts = item.getDescription().split(", ");
+
+                String[] descParts =
+                    item.getDescription().split(", ");
+
                 for (int j = 0; j < descParts.length; j++) {
-                    g.drawString(descParts[j], x + 15, y + 80 + (j * 20));
+                    g.drawString(
+                        descParts[j],
+                        x + 15,
+                        y + 80 + (j * 20)
+                    );
                 }
-                
-                // ราคา
+
+                // Price
                 g.setColor(Color.YELLOW);
                 g.setFont(new Font("Arial", Font.BOLD, 18));
-                g.drawString("Cost: " + item.getPrice(), x + 60, y + 150);
-                
-                // ปุ่ม BUY
+
+                g.drawString(
+                    "Cost: " + item.getPrice(),
+                    x + 60,
+                    y + 150
+                );
+
+                // Buy button
                 g.setColor(Color.GRAY);
                 g.fillRect(x + 30, y + 160, 140, 30);
+
                 g.setColor(Color.WHITE);
                 g.setFont(new Font("Arial", Font.PLAIN, 18));
                 g.drawString("BUY", x + 80, y + 182);
+
             } else {
-                // ช่องว่าง (ซื้อไปแล้ว)
+                // Sold out
                 g.setColor(new Color(40, 50, 60));
                 g.fillRect(x, y, width, 200);
+
                 g.setColor(Color.GRAY);
                 g.setFont(new Font("Arial", Font.BOLD, 18));
                 g.drawString("SOLD OUT", x + 50, y + 100);
             }
         }
-        
-        // --- ปุ่ม Reroll ---
+
+        // Reroll button
         g.setColor(Color.ORANGE);
         g.fillRect(100, 450, 200, 60);
+
         g.setColor(Color.BLACK);
         g.setFont(new Font("Arial", Font.BOLD, 24));
-        g.drawString("REROLL (" + shop.getRerollCost() + ")", 120, 490);
-        
-        // --- ปุ่ม Next Wave ---
+
+        g.drawString(
+            "REROLL (" + shop.getRerollCost() + ")",
+            120,
+            490
+        );
+
+        // Next Wave / Finish button
         g.setColor(new Color(200, 50, 50));
         g.fillRect(500, 450, 200, 60);
+
         g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 30));
-        g.drawString("NEXT WAVE", 510, 492);
+        g.setFont(new Font("Arial", Font.BOLD, 26));
+
+        if (currentWave >= MAX_WAVE) {
+            g.drawString("FINISH", 550, 490);
+        } else {
+            g.drawString("NEXT WAVE", 510, 490);
+        }
     }
 }
