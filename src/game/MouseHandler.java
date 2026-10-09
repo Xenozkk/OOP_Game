@@ -81,28 +81,31 @@ public class MouseHandler extends MouseAdapter {
         }
         // 5. หน้าต่าง Shop
         else if (gp.currentState == GameState.SHOP) {
-            // ปุ่มซื้อ HP (120, 310, 140x30)
-            if (mx >= 120 && mx <= 260 && my >= 310 && my <= 340) {
-                if (gp.player.getStats().spendMaterials(10)) {
-                    gp.player.getStats().increaseMaxHp(5);
+            int startX = 70;
+            int gap = 30;
+            int width = 200;
+            
+            // ตรวจสอบคลิกปุ่ม BUY ทั้ง 3 สล็อต
+            for (int i = 0; i < 3; i++) {
+                int x = startX + (i * (width + gap));
+                int btnX = x + 30;
+                int btnY = 180 + 160;
+                
+                // ตรวจสอบพิกัดปุ่ม BUY (กว้าง 140, สูง 30)
+                if (mx >= btnX && mx <= btnX + 140 && my >= btnY && my <= btnY + 30) {
+                    gp.shop.buyItem(i, gp.player.getStats());
+                    // อัปเดต MaxHP ลง Entity ทันทีเผื่อซื้อของเพิ่มเลือด
                     gp.player.setMaxHp(gp.player.getStats().getMaxHp());
-                    gp.player.heal(5); // แถมฮีลให้ด้วย
                 }
             }
-            // ปุ่มซื้อ Speed (330, 310, 140x30)
-            else if (mx >= 330 && mx <= 470 && my >= 310 && my <= 340) {
-                if (gp.player.getStats().spendMaterials(15)) {
-                    gp.player.getStats().setMoveSpeed(gp.player.getStats().getMoveSpeed() + 1.0f);
-                }
+            
+            // ปุ่ม Reroll (100, 450, กว้าง 200, สูง 60)
+            if (mx >= 100 && mx <= 300 && my >= 450 && my <= 510) {
+                gp.shop.reroll(gp.player.getStats());
             }
-            // ปุ่มซื้อ Range (540, 310, 140x30)
-            else if (mx >= 540 && mx <= 680 && my >= 310 && my <= 340) {
-                if (gp.player.getStats().spendMaterials(10)) {
-                    gp.player.getStats().setPickupRange(gp.player.getStats().getPickupRange() + 40.0f);
-                }
-            }
-            // ปุ่ม Next Wave (300, 450, 200x60)
-            else if (mx >= 300 && mx <= 500 && my >= 450 && my <= 510) {
+            
+            // ปุ่ม Next Wave (500, 450, กว้าง 200, สูง 60)
+            else if (mx >= 500 && mx <= 700 && my >= 450 && my <= 510) {
                 gp.currentWave++;
                 gp.waveTimer = 30 * gp.FPS; // เริ่มจับเวลาใหม่
                 gp.currentState = GameState.PLAYING;

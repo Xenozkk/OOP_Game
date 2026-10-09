@@ -53,28 +53,30 @@ public class Pistol extends Weapon {
     }
 
     @Override
-    protected void attack(float playerX, float playerY, ArrayList<Enemy> enemies) {
-        Enemy nearest = findNearest(playerX, playerY, enemies);
+    protected void attack(entities.Player player, ArrayList<Enemy> enemies) {
+        Enemy nearest = findNearest(player, enemies);
         if (nearest != null) {
             // ปากกระบอกปืนอยู่ที่ weaponX + GUN_W ถ้าหันขวา หรือ weaponX ถ้าหันซ้าย
             float muzzleX = facingRight ? weaponX + GUN_W : weaponX;
             float muzzleY = weaponY + 8; // เลื่อนลงมาให้ตรงกับรูลำกล้องปืนพอดี
             
-            // เล็งไปที่กลางตัวศัตรู (สมมติศัตรูขนาด 40x40)
+            // เล็งไปที่กลางตัวศัตรู
             float targetX = nearest.getX() + 20;
             float targetY = nearest.getY() + 20;
             
-            bullets.add(new Projectile(muzzleX, muzzleY, targetX, targetY, damage));
+            // 👑 ส่งดาเมจที่บวกโบนัสแล้วให้กระสุน
+            bullets.add(new Projectile(muzzleX, muzzleY, targetX, targetY, getCalculatedDamage(player)));
             recoilOffset = MAX_RECOIL;
         }
     }
 
-    private Enemy findNearest(float px, float py, ArrayList<Enemy> enemies) {
+    private Enemy findNearest(entities.Player player, ArrayList<Enemy> enemies) {
         Enemy nearest = null;
-        float minDist = range;
+        float currentRange = getCalculatedRange(player); // 👑 ใช้ระยะที่บวกโบนัส
+        float minDist = currentRange;
         for (Enemy e : enemies) {
-            float dx = e.getX() - px;
-            float dy = e.getY() - py;
+            float dx = e.getX() - player.getX();
+            float dy = e.getY() - player.getY();
             float dist = (float) Math.sqrt(dx * dx + dy * dy);
             if (dist < minDist) { minDist = dist; nearest = e; }
         }
@@ -82,11 +84,11 @@ public class Pistol extends Weapon {
     }
 
     @Override
-    protected void updatePosition(float playerX, float playerY, ArrayList<Enemy> enemies) {
+    protected void updatePosition(entities.Player player, ArrayList<Enemy> enemies) {
         // เช็คว่าศัตรูที่ใกล้สุดอยู่ซ้ายหรือขวา
-        Enemy nearest = findNearest(playerX, playerY, enemies);
+        Enemy nearest = findNearest(player, enemies);
         if (nearest != null) {
-            facingRight = nearest.getX() >= playerX;
+            facingRight = nearest.getX() >= player.getX();
         }
 
         // Recoil ฟื้นตัว
@@ -96,7 +98,7 @@ public class Pistol extends Weapon {
         }
 
         // ตรงกลางตัวผู้เล่น
-        float playerCenterX = playerX + 20; 
+        float playerCenterX = player.getX() + 20; 
         
         // วางปืนซ้ายหรือขวาให้ระยะห่างเท่ากัน
         if (facingRight) {
@@ -106,7 +108,7 @@ public class Pistol extends Weapon {
             // ปืนอยู่ด้านซ้ายของผู้เล่น (ต้องลบด้วยความกว้างปืนเพื่อให้สมมาตร)
             weaponX = playerCenterX - 15 - GUN_W + recoilOffset;
         }
-        weaponY = playerY + 10;
+        weaponY = player.getY() + 10;
     }
 
     @Override

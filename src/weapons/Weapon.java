@@ -23,25 +23,38 @@ public abstract class Weapon {
         this.range = range;
     }
 
-    public void update(float playerX, float playerY, ArrayList<Enemy> enemies) {
+    public void update(entities.Player player, ArrayList<Enemy> enemies) {
         // 1. อัปเดตตำแหน่งรูปอาวุธให้แปะอยู่รอบผู้เล่นก่อน
-        updatePosition(playerX, playerY, enemies);
+        updatePosition(player, enemies);
 
         // 2. นับถอยหลัง cooldown
         if (cooldownTimer > 0) {
             cooldownTimer--;
         } else {
             // ถ้าพร้อมโจมตีแล้ว ให้โจมตีเลย
-            attack(playerX, playerY, enemies);
-            cooldownTimer = cooldown;
+            attack(player, enemies);
+            
+            // คำนวณคูลดาวน์รอบต่อไป โดยเอา Attack Speed มาคิด
+            int bonus = player.getStats().getAttackSpeedBonus();
+            float multiplier = (bonus >= 0) ? (100.0f / (100.0f + bonus)) : ((100.0f - bonus) / 100.0f);
+            cooldownTimer = Math.max(5, (int)(cooldown * multiplier)); // ยิงไวสุดได้แค่ 5 เฟรม/นัด
         }
     }
 
+    // ฟังก์ชันคำนวณสเตตัสสดๆ
+    protected int getCalculatedDamage(entities.Player player) {
+        return Math.max(1, damage + player.getStats().getDamageBonus());
+    }
+
+    protected int getCalculatedRange(entities.Player player) {
+        return Math.max(20, range + player.getStats().getWeaponRangeBonus());
+    }
+
     // บังคับให้อาวุธทุกตัวต้องมีวิธีโจมตีเป็นของตัวเอง (Polymorphism)
-    protected abstract void attack(float playerX, float playerY, ArrayList<Enemy> enemies);
+    protected abstract void attack(entities.Player player, ArrayList<Enemy> enemies);
 
     // บังคับให้อาวุธทุกตัวต้องกำหนดว่าจะวางอาวุธไว้ที่ไหน
-    protected abstract void updatePosition(float playerX, float playerY, ArrayList<Enemy> enemies);
+    protected abstract void updatePosition(entities.Player player, ArrayList<Enemy> enemies);
 
     // บังคับให้อาวุธทุกตัวต้องวาดตัวเองได้
     public abstract void render(Graphics2D g2d);

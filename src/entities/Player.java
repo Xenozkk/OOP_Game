@@ -36,6 +36,8 @@ public class Player extends Entity {
         inventory.add(w);
     }
 
+    private int regenTimer = 0;
+
     @Override
     public void update() {
         float currentSpeed = stats.getMoveSpeed();
@@ -50,12 +52,21 @@ public class Player extends Entity {
         if (y > gp.SCREEN_HEIGHT - this.height) { y = gp.SCREEN_HEIGHT - this.height; }
         
         if (invincibilityTimer > 0) { invincibilityTimer--; }
+        
+        // --- ระบบ HP Regen ---
+        if (stats.getHpRegen() > 0) {
+            regenTimer++;
+            if (regenTimer >= 300) { // ทุกๆ 5 วินาที (300 เฟรม)
+                heal(stats.getHpRegen());
+                regenTimer = 0;
+            }
+        }
     }
     
     // อัปเดตอาวุธทุกชิ้น (เรียกจาก GamePanel พร้อมส่งลิสต์ศัตรูให้)
     public void updateWeapons(ArrayList<Enemy> enemies) {
         for (Weapon w : inventory) {
-            w.update(x, y, enemies);
+            w.update(this, enemies); // 👑 ส่งตัวเอง (Player) เข้าไปให้อาวุธดึงสเตตัสได้
             // ถ้าเป็นปืน ให้อัปเดตกระสุนด้วย
             if (w instanceof Pistol) {
                 ((Pistol)w).updateBullets(gp.SCREEN_WIDTH, gp.SCREEN_HEIGHT, enemies);
@@ -66,7 +77,11 @@ public class Player extends Entity {
     @Override
     public void takeDamage(int damage) {
         if (invincibilityTimer == 0) {
-            super.takeDamage(damage);
+            // หักลบด้วยเกราะ
+            int finalDamage = damage - stats.getArmor();
+            if (finalDamage < 1) finalDamage = 1; // เจ็บขั้นต่ำ 1 เสมอ
+            
+            super.takeDamage(finalDamage);
             invincibilityTimer = 60;
         }
     }

@@ -8,6 +8,12 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
+
+import entities.Enemy;
+import entities.MaterialItem;
+import entities.Player;
+import items.ShopItem;
+import stats.PlayerStats;
 import javax.swing.JPanel;
 import entities.Player;
 import entities.Enemy;
@@ -35,9 +41,10 @@ public class GamePanel extends JPanel implements Runnable {
     int frameCount = 0;
     Random random = new Random();
     
-    // ระบบ Wave
+    // ระบบ Wave และร้านค้า
     public int currentWave = 1;
     public int waveTimer = 30 * FPS; // 30 วินาที
+    public ShopManager shop = new ShopManager();
     
     // ตัวแปรเก็บค่าการเลือกจากหน้าต่างเมนู
     public int selectedChar = 0;
@@ -125,6 +132,9 @@ public class GamePanel extends JPanel implements Runnable {
                     player.getStats().addMaterials(m.getValue());
                 }
                 materials.clear();
+                
+                // รีเซ็ตร้านค้า สุ่มของใหม่ฟรี 1 รอบ
+                shop.startNewWaveShop();
                 return;
             }
 
@@ -393,55 +403,69 @@ public class GamePanel extends JPanel implements Runnable {
         g.setColor(new Color(50, 220, 80));
         g.drawString("Your Materials: " + player.getStats().getMaterials(), 300, 130);
         
-        // --- กล่องอัปเกรด 1: Max HP ---
-        g.setColor(Color.DARK_GRAY);
-        g.fillRect(100, 200, 180, 150);
-        g.setColor(Color.WHITE);
-        g.drawString("+5 Max HP", 125, 250);
-        g.setColor(Color.YELLOW);
-        g.drawString("Cost: 10", 145, 290);
-        // ปุ่มซื้อ HP
-        g.setColor(Color.GRAY);
-        g.fillRect(120, 310, 140, 30);
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.PLAIN, 18));
-        g.drawString("BUY", 170, 332);
+        // วาดไอเทม 3 สล็อต
+        ShopItem[] items = shop.getCurrentItems();
+        int startX = 70;
+        int gap = 30;
+        int width = 200;
         
-        // --- กล่องอัปเกรด 2: Move Speed ---
-        g.setColor(Color.DARK_GRAY);
-        g.fillRect(310, 200, 180, 150);
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 24));
-        g.drawString("+1 Speed", 345, 250);
-        g.setColor(Color.YELLOW);
-        g.drawString("Cost: 15", 355, 290);
-        // ปุ่มซื้อ Speed
-        g.setColor(Color.GRAY);
-        g.fillRect(330, 310, 140, 30);
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.PLAIN, 18));
-        g.drawString("BUY", 380, 332);
+        for (int i = 0; i < items.length; i++) {
+            ShopItem item = items[i];
+            int x = startX + (i * (width + gap));
+            int y = 180;
+            
+            if (item != null) {
+                // กล่องไอเทม
+                g.setColor(Color.DARK_GRAY);
+                g.fillRect(x, y, width, 200);
+                
+                // ชื่อไอเทม
+                g.setColor(Color.WHITE);
+                g.setFont(new Font("Arial", Font.BOLD, 18));
+                g.drawString(item.getName(), x + 15, y + 40);
+                
+                // คำอธิบาย
+                g.setFont(new Font("Arial", Font.PLAIN, 14));
+                g.setColor(Color.LIGHT_GRAY);
+                // ตัดคำง่ายๆ ด้วยการแยกด้วยลูกน้ำ (ในของจริงอาจเขียนฟังก์ชันวาด Text หลายบรรทัด)
+                String[] descParts = item.getDescription().split(", ");
+                for (int j = 0; j < descParts.length; j++) {
+                    g.drawString(descParts[j], x + 15, y + 80 + (j * 20));
+                }
+                
+                // ราคา
+                g.setColor(Color.YELLOW);
+                g.setFont(new Font("Arial", Font.BOLD, 18));
+                g.drawString("Cost: " + item.getPrice(), x + 60, y + 150);
+                
+                // ปุ่ม BUY
+                g.setColor(Color.GRAY);
+                g.fillRect(x + 30, y + 160, 140, 30);
+                g.setColor(Color.WHITE);
+                g.setFont(new Font("Arial", Font.PLAIN, 18));
+                g.drawString("BUY", x + 80, y + 182);
+            } else {
+                // ช่องว่าง (ซื้อไปแล้ว)
+                g.setColor(new Color(40, 50, 60));
+                g.fillRect(x, y, width, 200);
+                g.setColor(Color.GRAY);
+                g.setFont(new Font("Arial", Font.BOLD, 18));
+                g.drawString("SOLD OUT", x + 50, y + 100);
+            }
+        }
         
-        // --- กล่องอัปเกรด 3: Pickup Range ---
-        g.setColor(Color.DARK_GRAY);
-        g.fillRect(520, 200, 180, 150);
-        g.setColor(Color.WHITE);
+        // --- ปุ่ม Reroll ---
+        g.setColor(Color.ORANGE);
+        g.fillRect(100, 450, 200, 60);
+        g.setColor(Color.BLACK);
         g.setFont(new Font("Arial", Font.BOLD, 24));
-        g.drawString("+Range", 565, 250);
-        g.setColor(Color.YELLOW);
-        g.drawString("Cost: 10", 565, 290);
-        // ปุ่มซื้อ Range
-        g.setColor(Color.GRAY);
-        g.fillRect(540, 310, 140, 30);
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.PLAIN, 18));
-        g.drawString("BUY", 590, 332);
+        g.drawString("REROLL (" + shop.getRerollCost() + ")", 120, 490);
         
         // --- ปุ่ม Next Wave ---
         g.setColor(new Color(200, 50, 50));
-        g.fillRect(300, 450, 200, 60);
+        g.fillRect(500, 450, 200, 60);
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 30));
-        g.drawString("NEXT WAVE", 310, 492);
+        g.drawString("NEXT WAVE", 510, 492);
     }
 }

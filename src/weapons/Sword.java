@@ -59,15 +59,16 @@ public class Sword extends Weapon {
     }
 
     @Override
-    protected void attack(float playerX, float playerY, ArrayList<Enemy> enemies) {
+    protected void attack(entities.Player player, ArrayList<Enemy> enemies) {
         if (state != SwordState.IDLE) return; // ถ้ากำลังพุ่งอยู่ ข้ามไป
 
         // หาศัตรูที่ใกล้ที่สุดในระยะ
         Enemy target = null;
-        float minDist = range;
+        float currentRange = getCalculatedRange(player); // 👑 ใช้โบนัสระยะฟัน
+        float minDist = currentRange;
         for (Enemy e : enemies) {
-            float dx = e.getX() - playerX;
-            float dy = e.getY() - playerY;
+            float dx = e.getX() - player.getX();
+            float dy = e.getY() - player.getY();
             float dist = (float) Math.sqrt(dx * dx + dy * dy);
             if (dist < minDist) { minDist = dist; target = e; }
         }
@@ -80,14 +81,14 @@ public class Sword extends Weapon {
             lungeTargetY = target.getY();
             lungeProgress = 0f;
             state = SwordState.LUNGING;
-            target.takeDamage(damage); // ลดเลือดทันที
+            target.takeDamage(getCalculatedDamage(player)); // 👑 ใช้โบนัสดาเมจ
         }
     }
 
     @Override
-    protected void updatePosition(float playerX, float playerY, ArrayList<Enemy> enemies) {
-        float homeX = playerX + HOME_OFFSET_X;
-        float homeY = playerY + HOME_OFFSET_Y;
+    protected void updatePosition(entities.Player player, ArrayList<Enemy> enemies) {
+        float homeX = player.getX() + HOME_OFFSET_X;
+        float homeY = player.getY() + HOME_OFFSET_Y;
 
         switch (state) {
             case IDLE:
