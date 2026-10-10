@@ -136,7 +136,7 @@ public class MouseHandler extends MouseAdapter {
                 int x = startX + (i * (width + gap));
 
                 int btnX = x + 30;
-                int btnY = 180 + 160;
+                int btnY = 180 + 200;
 
                 if (mx >= btnX && mx <= btnX + 140
                         && my >= btnY && my <= btnY + 30) {

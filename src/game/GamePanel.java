@@ -678,12 +678,17 @@ public class GamePanel extends JPanel implements Runnable {
             if (item != null) {
                 // Item box
                 g.setColor(Color.DARK_GRAY);
-                g.fillRect(x, y, width, 200);
+                g.fillRect(x, y, width, 240); // 📦 เพิ่มความสูงกล่องเป็น 240 กันข้อความทับกัน
 
                 // Item name
                 g.setColor(Color.WHITE);
                 g.setFont(new Font("Arial", Font.BOLD, 18));
-                g.drawString(item.getName(), x + 15, y + 40);
+                g.drawString(item.getName(), x + 15, y + 30);
+                
+                // 🎨 วาดรูปภาพไอเทมถ้ามี
+                if (item.getImage() != null) {
+                    g.drawImage(item.getImage(), x + 70, y + 40, 60, 60, null);
+                }
 
                 // Item description
                 g.setFont(new Font("Arial", Font.PLAIN, 14));
@@ -696,7 +701,7 @@ public class GamePanel extends JPanel implements Runnable {
                     g.drawString(
                         descParts[j],
                         x + 15,
-                        y + 80 + (j * 20)
+                        y + 120 + (j * 20) // ขยับลงมาที่ 120
                     );
                 }
 
@@ -707,25 +712,25 @@ public class GamePanel extends JPanel implements Runnable {
                 g.drawString(
                     "Cost: " + item.getPrice(),
                     x + 60,
-                    y + 150
+                    y + 190 // ขยับราคาลงมาหลบข้อความ 3 บรรทัด
                 );
 
                 // Buy button
                 g.setColor(Color.GRAY);
-                g.fillRect(x + 30, y + 160, 140, 30);
+                g.fillRect(x + 30, y + 200, 140, 30); // ขยับปุ่มลงมา
 
                 g.setColor(Color.WHITE);
                 g.setFont(new Font("Arial", Font.PLAIN, 18));
-                g.drawString("BUY", x + 80, y + 182);
+                g.drawString("BUY", x + 80, y + 222);
 
             } else {
                 // Sold out
                 g.setColor(new Color(40, 50, 60));
-                g.fillRect(x, y, width, 200);
+                g.fillRect(x, y, width, 240); // เพิ่มความสูงให้เท่ากัน
 
                 g.setColor(Color.GRAY);
                 g.setFont(new Font("Arial", Font.BOLD, 18));
-                g.drawString("SOLD OUT", x + 50, y + 100);
+                g.drawString("SOLD OUT", x + 50, y + 120);
             }
         }
 

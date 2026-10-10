@@ -23,11 +23,20 @@ public abstract class ShopItem {
     }
 
     protected void loadImage(String imagePath) {
-        try {
-            this.image = ImageIO.read(new File(imagePath));
-        } catch (IOException e) {
-            System.out.println("Error loading image: " + imagePath);
+        String[] paths = {
+            imagePath,
+            "/Users/xenoz/Game_OOP/" + imagePath
+        };
+        for (String path : paths) {
+            try {
+                File f = new File(path);
+                if (f.exists()) {
+                    this.image = ImageIO.read(f);
+                    return;
+                }
+            } catch (IOException e) { }
         }
+        System.out.println("Error loading image (Not Found): " + imagePath);
     }
 
     public String getName() { return name; }
