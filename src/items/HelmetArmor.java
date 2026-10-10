@@ -2,9 +2,9 @@ package items;
 
 import stats.PlayerStats;
 
-public class HardHat extends ShopItem {
-    public HardHat() {
-        super("Hard Hat", "Armor +2, Max HP +5, Pickup Range -20", 20);
+public class HelmetArmor extends ShopItem {
+    public HelmetArmor() {
+        super("Helmet Armor", "Armor +2, Max HP +5, Pickup Range -20", 20);
 
         loadImage("assets/items/helmet_01b.png");
     }

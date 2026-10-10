@@ -26,7 +26,7 @@ public class ShopManager {
         allItems.add(new EspressoShot());
         allItems.add(new RubberDuck());
         allItems.add(new Chip());
-        allItems.add(new HardHat());
+        allItems.add(new HelmetArmor());
     }
 
     // เรียกตอนจบเวฟ เพื่อรีเซ็ตราคารีเฟรชและสุ่มของใหม่ฟรี 1 รอบ
