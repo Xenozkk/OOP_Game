@@ -19,10 +19,10 @@ public class ShopManager {
         // ลงทะเบียนไอเทมทั้งหมดที่มีในเกมเข้าโกดัง
         allItems.add(new EnergyDrink());
         allItems.add(new CameraLens());
-        allItems.add(new HeavyBackpack());
-        allItems.add(new LeftoverBurger());
+        allItems.add(new GiftBox());       // เดิมคือ HeavyBackpack
+        allItems.add(new Burger());        // เดิมคือ LeftoverBurger
         allItems.add(new CreditCard());
-        allItems.add(new SmartWatch());
+        allItems.add(new Battery());      // เดิมคือ SmartWatch
         allItems.add(new EspressoShot());
         allItems.add(new Dumbbell());
         allItems.add(new GamingMouse());

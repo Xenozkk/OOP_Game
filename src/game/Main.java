@@ -9,11 +9,9 @@ public class Main {
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setResizable(false);
         
-        // เอา GamePanel (กระดานวาดรูป) ไปแปะในหน้าต่าง
         GamePanel gamePanel = new GamePanel();
         window.add(gamePanel);
         
-        // ให้หน้าต่างปรับขนาดพอดีกับ GamePanel
         window.pack();
         
         // จัดให้อยู่กึ่งกลางหน้าจอ
@@ -22,7 +20,6 @@ public class Main {
         // แสดงหน้าต่าง
         window.setVisible(true);
         
-        // เริ่มระบบ Game Loop 60 FPS
         gamePanel.startGameThread();
         
         System.out.println("✅ Game Window Started Successfully in new path!");
