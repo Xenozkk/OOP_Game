@@ -36,11 +36,13 @@ public abstract class GameObject {
     // บังคับให้ลูกๆ กำหนดการวาดชั่วคราว (ตอนที่ยังไม่มีรูปภาพ)
     protected abstract void renderFallback(Graphics g);
 
-    // Getters
+    // Getters and Setters
     public float getX() { return x; }
     public float getY() { return y; }
     public int getWidth() { return width; }
     public int getHeight() { return height; }
+    public void setX(float x) { this.x = x; }
+    public void setY(float y) { this.y = y; }
     
     // Setter สำหรับใส่รูปตอน Art พร้อม
     public void setSprite(BufferedImage image) {

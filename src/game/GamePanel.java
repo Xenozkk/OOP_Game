@@ -10,6 +10,7 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
@@ -45,6 +46,7 @@ public class GamePanel extends JPanel implements Runnable {
     public int waveTimer = 30 * FPS;
 
     public ShopManager shop = new ShopManager();
+    public ArrayList<EnemyProjectile> orphanProjectiles = new ArrayList<>();
 
     public int selectedChar = 0;
     public int selectedWeapon = 0;
@@ -209,12 +211,25 @@ public class GamePanel extends JPanel implements Runnable {
                 SCREEN_HEIGHT
             );
 
-            // ตรวจสอบการชนระหว่างผู้เล่นกับศัตรู
+            // ตรวจสอบการชนระหว่างผู้เล่นกับศัตรู (บีบ Hitbox ให้เล็กลงจากรูปภาพ)
+            int hitBoxPaddingX = 20; // บีบซ้ายขวาเข้ามา 20 pixel
+            int hitBoxPaddingY = 15; // บีบบนล่างเข้ามา 15 pixel
+            
+            float pX = player.getX() + hitBoxPaddingX;
+            float pY = player.getY() + hitBoxPaddingY;
+            float pW = player.getWidth() - (hitBoxPaddingX * 2);
+            float pH = player.getHeight() - (hitBoxPaddingY * 2);
+            
+            float eX = enemy.getX() + 5;
+            float eY = enemy.getY() + 5;
+            float eW = enemy.getWidth() - 10;
+            float eH = enemy.getHeight() - 10;
+
             boolean isColliding =
-                player.getX() < enemy.getX() + enemy.getWidth()
-                && player.getX() + player.getWidth() > enemy.getX()
-                && player.getY() < enemy.getY() + enemy.getHeight()
-                && player.getY() + player.getHeight() > enemy.getY();
+                pX < eX + eW
+                && pX + pW > eX
+                && pY < eY + eH
+                && pY + pH > eY;
 
             if (isColliding) {
                 player.takeDamage(enemy.getContactDamage());
@@ -228,10 +243,10 @@ public class GamePanel extends JPanel implements Runnable {
                 EnemyProjectile bullet = bulletIterator.next();
 
                 boolean hitPlayer =
-                    bullet.getX() >= player.getX()
-                    && bullet.getX() <= player.getX() + player.getWidth()
-                    && bullet.getY() >= player.getY()
-                    && bullet.getY() <= player.getY() + player.getHeight();
+                    bullet.getX() >= pX
+                    && bullet.getX() <= pX + pW
+                    && bullet.getY() >= pY
+                    && bullet.getY() <= pY + pH;
 
                 if (hitPlayer) {
                     player.takeDamage(bullet.getDamage());
@@ -248,8 +263,36 @@ public class GamePanel extends JPanel implements Runnable {
                         1
                     )
                 );
+                
+                // โอนกระสุนที่ค้างอยู่ไปให้ GamePanel จัดการต่อ
+                orphanProjectiles.addAll(enemy.getProjectiles());
 
                 enemyIterator.remove();
+            }
+        }
+        
+        // อัปเดตกระสุนกำพร้า (ยิงมาแล้วศัตรูตาย)
+        Iterator<EnemyProjectile> orphanIterator = orphanProjectiles.iterator();
+        while (orphanIterator.hasNext()) {
+            EnemyProjectile bullet = orphanIterator.next();
+            bullet.update();
+
+            float pX = player.getX() + 20;
+            float pY = player.getY() + 15;
+            float pW = player.getWidth() - 40;
+            float pH = player.getHeight() - 30;
+
+            boolean hitPlayer =
+                bullet.getX() >= pX
+                && bullet.getX() <= pX + pW
+                && bullet.getY() >= pY
+                && bullet.getY() <= pY + pH;
+
+            if (hitPlayer) {
+                player.takeDamage(bullet.getDamage());
+                orphanIterator.remove();
+            } else if (!bullet.isActive() || bullet.isOutOfBounds(SCREEN_WIDTH, SCREEN_HEIGHT)) {
+                orphanIterator.remove();
             }
         }
 
@@ -301,6 +344,11 @@ public class GamePanel extends JPanel implements Runnable {
     // --------------------------------------------------
 
     private void finishWave() {
+        if (currentWave >= MAX_WAVE) {
+            currentState = GameState.GAME_OVER;
+            return;
+        }
+        
         currentState = GameState.SHOP;
 
         enemies.clear();
@@ -326,6 +374,14 @@ public class GamePanel extends JPanel implements Runnable {
         currentWave++;
         waveTimer = 30 * FPS;
         frameCount = 0;
+
+        // อัปเดต MaxHP จากของที่ซื้อ และฟื้นฟูเลือดให้เต็ม
+        player.syncStats();
+        player.heal(player.getMaxHp());
+        
+        // ย้ายผู้เล่นกลับมาตรงกลางจอ
+        player.setX(SCREEN_WIDTH / 2.0f - player.getWidth() / 2.0f);
+        player.setY(SCREEN_HEIGHT / 2.0f - player.getHeight() / 2.0f);
 
         currentState = GameState.PLAYING;
     }
@@ -370,6 +426,11 @@ public class GamePanel extends JPanel implements Runnable {
                     bullet.render(g2d);
                 }
             }
+            
+            // วาดกระสุนตกค้าง
+            for (EnemyProjectile bullet : orphanProjectiles) {
+                bullet.render(g2d);
+            }
 
             // วาด Materials
             for (MaterialItem material : materials) {
@@ -408,12 +469,32 @@ public class GamePanel extends JPanel implements Runnable {
         g.drawString("BACK", 35, 45);
     }
 
+    private BufferedImage titleBgImage;
+
     private void drawTitleScreen(Graphics g) {
+        if (titleBgImage == null) {
+            try {
+                titleBgImage = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/bg/title_bg.png"));
+            } catch (Exception e) { e.printStackTrace(); }
+        }
+
+        if (titleBgImage != null) {
+            g.drawImage(titleBgImage, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
+        } else {
+            g.setColor(Color.DARK_GRAY);
+            g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+        }
+
+        // วาดชื่อเกม
+        g.setColor(new Color(0, 0, 0, 150)); // เงาดำ
+        g.setFont(new Font("Arial", Font.BOLD, 62));
+        g.drawString("THE SURVIVOR", 145, 255);
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 60));
-        g.drawString("BROTATO CLONE", 140, 250);
+        g.drawString("THE SURVIVOR", 140, 250);
 
-        g.setColor(Color.GRAY);
+        // วาดปุ่ม START
+        g.setColor(new Color(40, 40, 40, 200));
         g.fillRect(300, 400, 200, 50);
 
         g.setColor(Color.WHITE);
@@ -421,24 +502,45 @@ public class GamePanel extends JPanel implements Runnable {
         g.drawString("START", 350, 435);
     }
 
+    private BufferedImage speedyImage;
+    private BufferedImage knightImage;
+
     private void drawCharSelectScreen(Graphics g) {
         drawBackButton(g);
+
+        if (speedyImage == null) {
+            try {
+                BufferedImage sheet = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/characters/player_sheet.png"));
+                speedyImage = sheet.getSubimage(0, 0, 32, 32); 
+            } catch (Exception e) {}
+        }
+        
+        if (knightImage == null) {
+            try {
+                BufferedImage sheet = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/characters/knight_sheet.png"));
+                knightImage = sheet.getSubimage(0, 0, 32, 32); 
+            } catch (Exception e) {}
+        }
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 40));
         g.drawString("Select Character", 240, 150);
 
-        // Tank
+        // Knight (Formerly Tank)
         g.setColor(Color.GRAY);
         g.fillRect(150, 250, 200, 200);
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 24));
-        g.drawString("TANK", 210, 290);
+        g.drawString("KNIGHT", 205, 290);
+        
+        if (knightImage != null) {
+            g.drawImage(knightImage, 210, 310, 80, 80, null);
+        }
 
         g.setFont(new Font("Arial", Font.PLAIN, 16));
-        g.drawString("HP: 20", 220, 340);
-        g.drawString("Speed: Slow", 200, 370);
+        g.drawString("HP: 20", 220, 410);
+        g.drawString("Speed: Slow", 200, 435);
 
         // Speedy
         g.setColor(Color.GRAY);
@@ -447,42 +549,68 @@ public class GamePanel extends JPanel implements Runnable {
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("SPEEDY", 500, 290);
+        
+        if (speedyImage != null) {
+            g.drawImage(speedyImage, 510, 310, 80, 80, null);
+        }
 
         g.setFont(new Font("Arial", Font.PLAIN, 16));
-        g.drawString("HP: 5", 530, 340);
-        g.drawString("Speed: Fast", 510, 370);
+        g.drawString("HP: 5", 530, 410);
+        g.drawString("Speed: Fast", 510, 435);
     }
+
+    private BufferedImage swordImageUI;
+    private BufferedImage pistolImageUI;
 
     private void drawWeaponSelectScreen(Graphics g) {
         drawBackButton(g);
+        
+        if (swordImageUI == null) {
+            try { swordImageUI = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/weapons/sword.png")); } 
+            catch (Exception e) {}
+        }
+        if (pistolImageUI == null) {
+            try { pistolImageUI = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/weapons/pistol.png")); } 
+            catch (Exception e) {}
+        }
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 40));
         g.drawString("Select Weapon", 260, 150);
 
         // Sword
-        g.setColor(Color.DARK_GRAY);
+        g.setColor(Color.GRAY);
         g.fillRect(150, 250, 200, 200);
 
         g.setColor(Color.ORANGE);
         g.setFont(new Font("Arial", Font.BOLD, 24));
-        g.drawString("SWORD", 200, 290);
+        g.drawString("SWORD", 205, 290);
+        
+        if (swordImageUI != null) {
+            // ย่อรูปลงมา
+            g.drawImage(swordImageUI, 205, 320, 90, 60, null);
+        }
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 16));
-        g.drawString("Type: Melee", 205, 340);
+        g.drawString("Type: Melee", 205, 420);
 
         // Pistol
-        g.setColor(Color.DARK_GRAY);
+        g.setColor(Color.GRAY);
         g.fillRect(450, 250, 200, 200);
 
         g.setColor(Color.CYAN);
         g.setFont(new Font("Arial", Font.BOLD, 24));
         g.drawString("PISTOL", 505, 290);
+        
+        if (pistolImageUI != null) {
+            // ย่อรูปลงมา
+            g.drawImage(pistolImageUI, 495, 335, 110, 65, null);
+        }
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.PLAIN, 16));
-        g.drawString("Type: Ranged", 500, 340);
+        g.drawString("Type: Ranged", 500, 420);
     }
 
     // --------------------------------------------------
@@ -740,12 +868,9 @@ public class GamePanel extends JPanel implements Runnable {
 
         g.setColor(Color.BLACK);
         g.setFont(new Font("Arial", Font.BOLD, 24));
-
-        g.drawString(
-            "REROLL (" + shop.getRerollCost() + ")",
-            120,
-            490
-        );
+        
+        String rerollText = shop.isShopEmpty() ? "REROLL (FREE)" : "REROLL (" + shop.getRerollCost() + ")";
+        g.drawString(rerollText, 120, 490);
 
         // Next Wave / Finish button
         g.setColor(new Color(200, 50, 50));

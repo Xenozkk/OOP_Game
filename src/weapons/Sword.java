@@ -18,8 +18,8 @@ public class Sword extends Weapon {
     private BufferedImage swordImage;
 
     // ตำแหน่ง "บ้าน" (ที่วางดาบเมื่อไม่โจมตี) สัมพัทธ์กับผู้เล่น
-    private static final float HOME_OFFSET_X = 30f;
-    private static final float HOME_OFFSET_Y = -10f;
+    private static final float HOME_OFFSET_X = 50f;
+    private static final float HOME_OFFSET_Y = 30f;
     private static final int SWORD_W = 44;
     private static final int SWORD_H = 44;
 

@@ -23,8 +23,8 @@ public class Pistol extends Weapon {
     private static final float MAX_RECOIL = 8f;
     private static final float RECOIL_SPEED = 1.5f;
 
-    private static final int GUN_W = 52;
-    private static final int GUN_H = 32;
+    private static final int GUN_W = 40;
+    private static final int GUN_H = 24;
 
     public ArrayList<Projectile> bullets = new ArrayList<>();
 
@@ -98,17 +98,19 @@ public class Pistol extends Weapon {
         }
 
         // ตรงกลางตัวผู้เล่น
-        float playerCenterX = player.getX() + 20; 
+        float playerCenterX = player.getX() + player.getWidth() / 2.0f; 
         
         // วางปืนซ้ายหรือขวาให้ระยะห่างเท่ากัน
         if (facingRight) {
             // ปืนอยู่ด้านขวาของผู้เล่น
-            weaponX = playerCenterX + 15 - recoilOffset;
+            weaponX = playerCenterX + 10 - recoilOffset;
         } else {
             // ปืนอยู่ด้านซ้ายของผู้เล่น (ต้องลบด้วยความกว้างปืนเพื่อให้สมมาตร)
-            weaponX = playerCenterX - 15 - GUN_W + recoilOffset;
+            weaponX = playerCenterX - 10 - GUN_W + recoilOffset;
         }
-        weaponY = player.getY() + 10;
+        
+        // ให้ปืนอยู่ประมาณมือของผู้เล่น
+        weaponY = player.getY() + player.getHeight() / 2.0f - GUN_H / 2.0f + 10;
     }
 
     @Override

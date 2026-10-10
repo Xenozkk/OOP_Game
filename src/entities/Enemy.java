@@ -2,6 +2,10 @@ package entities;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import javax.imageio.ImageIO;
 import java.util.ArrayList;
 
 public class Enemy extends Entity {
@@ -9,10 +13,12 @@ public class Enemy extends Entity {
     public enum Type {
         CHASER,
         RUNNER,
-        SHOOTER,
-        TANK,
-        BRUTE
+        SHOOTER
     }
+
+    private static BufferedImage chaserImg;
+    private static BufferedImage runnerImg;
+    private static BufferedImage shooterImg;
 
     private final Player player;
     private final Type type;
@@ -43,15 +49,11 @@ public class Enemy extends Entity {
     private static int getSize(Type type) {
         switch (type) {
             case RUNNER:
-                return 24;
-            case TANK:
-                return 38;
-            case BRUTE:
-                return 44;
+                return 40; // จาก 24 เป็น 40
             case SHOOTER:
-                return 28;
+                return 48; // จาก 28 เป็น 48
             default:
-                return 30;
+                return 50; // จาก 30 เป็น 50
         }
     }
 
@@ -61,10 +63,6 @@ public class Enemy extends Entity {
                 return 2;
             case SHOOTER:
                 return 3;
-            case TANK:
-                return 10;
-            case BRUTE:
-                return 20;
             default:
                 return 2;
         }
@@ -76,10 +74,6 @@ public class Enemy extends Entity {
                 return 2.5f;
             case SHOOTER:
                 return 0.8f;
-            case TANK:
-                return 0.6f;
-            case BRUTE:
-                return 0.4f;
             default:
                 return 1.5f;
         }
@@ -97,14 +91,7 @@ public class Enemy extends Entity {
     }
 
     private static int getDamage(Type type) {
-        switch (type) {
-            case TANK:
-                return 2;
-            case BRUTE:
-                return 3;
-            default:
-                return 1;
-        }
+        return 1;
     }
 
     @Override
@@ -133,13 +120,13 @@ public class Enemy extends Entity {
     private void updateShooter(float dx, float dy, float distance,
                                float enemyX, float enemyY,
                                float playerX, float playerY) {
-        // รักษาระยะจากผู้เล่น ไม่วิ่งชนเหมือนศัตรูทั่วไป
-        float preferredDistance = 220.0f;
+        // รักษาระยะจากผู้เล่น ให้มากกว่าระยะยิงเริ่มต้นของผู้เล่น (500)
+        float preferredDistance = 550.0f;
 
         if (distance > preferredDistance && distance > 0) {
             x += (dx / distance) * speed;
             y += (dy / distance) * speed;
-        } else if (distance < 130.0f && distance > 0) {
+        } else if (distance < 450.0f && distance > 0) {
             x -= (dx / distance) * speed;
             y -= (dy / distance) * speed;
         }
@@ -148,7 +135,7 @@ public class Enemy extends Entity {
             shootCooldown--;
         }
 
-        if (distance <= 320.0f && shootCooldown <= 0) {
+        if (distance <= 800.0f && shootCooldown <= 0) {
             projectiles.add(new EnemyProjectile(
                 enemyX, enemyY, playerX, playerY, 1
             ));
@@ -181,6 +168,49 @@ public class Enemy extends Entity {
     }
 
     @Override
+    public void render(Graphics g) {
+        BufferedImage img = null;
+        try {
+            if (type == Type.CHASER) {
+                if (chaserImg == null) chaserImg = ImageIO.read(new File("/Users/xenoz/Game_OOP/assets/characters/enemy_chaser.png"));
+                img = chaserImg;
+            } else if (type == Type.RUNNER) {
+                if (runnerImg == null) runnerImg = ImageIO.read(new File("/Users/xenoz/Game_OOP/assets/characters/enemy_runner.png"));
+                img = runnerImg;
+            } else if (type == Type.SHOOTER) {
+                if (shooterImg == null) shooterImg = ImageIO.read(new File("/Users/xenoz/Game_OOP/assets/characters/enemy_shooter.png"));
+                img = shooterImg;
+            }
+        } catch (Exception e) {}
+
+        if (img != null && player != null) {
+            Graphics2D g2d = (Graphics2D) g.create();
+            boolean faceLeft = player.getX() < this.x; // ถ้าเป้าหมายอยู่ซ้ายมือ
+            
+            if (faceLeft) {
+                // หันหน้าซ้าย (Flip แนวนอน)
+                g2d.translate((int)x + width, (int)y);
+                g2d.scale(-1, 1);
+                g2d.drawImage(img, 0, 0, width, height, null);
+            } else {
+                // หันหน้าขวา (ปกติ)
+                g2d.drawImage(img, (int)x, (int)y, width, height, null);
+            }
+            g2d.dispose();
+            
+            // วาดหลอดเลือด
+            g.setColor(Color.BLACK);
+            g.fillRect((int) x, (int) y - 7, width, 4);
+            g.setColor(Color.GREEN);
+            int hpWidth = (int) (width * Math.max(0.0, Math.min(1.0, (double) hp / maxHp)));
+            g.fillRect((int) x, (int) y - 7, hpWidth, 4);
+            
+        } else {
+            renderFallback(g);
+        }
+    }
+
+    @Override
     protected void renderFallback(Graphics g) {
         switch (type) {
             case RUNNER:
@@ -188,12 +218,6 @@ public class Enemy extends Entity {
                 break;
             case SHOOTER:
                 g.setColor(Color.MAGENTA);
-                break;
-            case TANK:
-                g.setColor(Color.GRAY);
-                break;
-            case BRUTE:
-                g.setColor(new Color(120, 30, 30));
                 break;
             default:
                 g.setColor(Color.RED);
