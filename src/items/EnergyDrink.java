@@ -6,7 +6,7 @@ public class EnergyDrink extends ShopItem {
     public EnergyDrink() {
         super("Energy Drink", "ATK Spd +10, Speed +1, Max HP -2", 15);
 
-        loadImage("assets/items/soft_drink_blue.png");
+        loadImage("./assets/items/soft_drink_blue.png");
     }
 
     @Override

@@ -680,6 +680,10 @@ public class GamePanel extends JPanel implements Runnable {
                 g.setColor(Color.DARK_GRAY);
                 g.fillRect(x, y, width, 200);
 
+                if (item.getImage() != null) {
+                    g.drawImage(item.getImage(), x + 140, y + 10, 48, 48, null);
+                }
+
                 // Item name
                 g.setColor(Color.WHITE);
                 g.setFont(new Font("Arial", Font.BOLD, 18));

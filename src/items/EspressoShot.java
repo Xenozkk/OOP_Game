@@ -6,7 +6,7 @@ public class EspressoShot extends ShopItem {
     public EspressoShot() {
         super("Espresso Shot", "ATK Spd +15, Weapon Range -20", 18);
 
-        loadImage("assets/items/coffee_espresso.png");
+        loadImage("./assets/items/coffee_espresso.png");
     }
 
     @Override

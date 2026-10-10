@@ -6,7 +6,7 @@ public class CameraLens extends ShopItem {
     public CameraLens() {
         super("Camera Lens", "Weapon Range +50, Pickup Range +30, ATK Spd -5", 20);
 
-        loadImage("assets/items/lens.png");
+        loadImage("./assets/items/lens.png");
     }
 
     @Override
