@@ -5,6 +5,8 @@ import stats.PlayerStats;
 public class CreditCard extends ShopItem {
     public CreditCard() {
         super("Credit Card", "Damage +2, ATK Spd +5, Armor -2", 25);
+
+        loadImage("assets/items/credit_card_2.png");
     }
 
     @Override
