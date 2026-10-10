@@ -1,5 +1,10 @@
 package game;
 
+import entities.Enemy;
+import entities.EnemyProjectile;
+import entities.MaterialItem;
+import entities.Player;
+import items.ShopItem;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -9,12 +14,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
 import javax.swing.JPanel;
-
-import entities.Enemy;
-import entities.EnemyProjectile;
-import entities.MaterialItem;
-import entities.Player;
-import items.ShopItem;
 import stats.PlayerStats;
 
 public class GamePanel extends JPanel implements Runnable {
@@ -31,6 +30,8 @@ public class GamePanel extends JPanel implements Runnable {
     MouseHandler mouseH;
 
     Player player;
+
+    private final Background background;
 
     ArrayList<Enemy> enemies = new ArrayList<>();
     ArrayList<MaterialItem> materials = new ArrayList<>();
@@ -53,6 +54,8 @@ public class GamePanel extends JPanel implements Runnable {
         setBackground(Color.DARK_GRAY);
         setDoubleBuffered(true);
 
+        background = new Background();
+
         keyH = new KeyHandler(this);
         addKeyListener(keyH);
 
@@ -67,6 +70,8 @@ public class GamePanel extends JPanel implements Runnable {
     // --------------------------------------------------
 
     public void setupGame() {
+        background.generateRandomMap(random);
+
         PlayerStats initialStats = new PlayerStats();
 
         if (selectedChar == 1) {
@@ -348,6 +353,15 @@ public class GamePanel extends JPanel implements Runnable {
             drawShopScreen(g2d);
 
         } else {
+            // วาดพื้นหลังก่อนวาดวัตถุอื่น
+            background.draw(
+                g2d,
+                SCREEN_WIDTH,
+                SCREEN_HEIGHT,
+                0,
+                0
+            );
+
             // วาดศัตรูและกระสุนของ Shooter
             for (Enemy enemy : enemies) {
                 enemy.render(g2d);
