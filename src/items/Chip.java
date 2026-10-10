@@ -2,9 +2,11 @@ package items;
 
 import stats.PlayerStats;
 
-public class GamingMouse extends ShopItem {
-    public GamingMouse() {
-        super("Gaming Mouse", "Weapon Range +40, ATK Spd +5, Armor -1", 25);
+public class Chip extends ShopItem {
+    public Chip() {
+        super("Chip", "Weapon Range +40, ATK Spd +5, Armor -1", 25);
+
+        loadImage("assets/items/Icon14_32.png");
     }
 
     @Override

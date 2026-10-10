@@ -24,8 +24,8 @@ public class ShopManager {
         allItems.add(new CreditCard());
         allItems.add(new Battery());      // เดิมคือ SmartWatch
         allItems.add(new EspressoShot());
-        allItems.add(new Dumbbell());
-        allItems.add(new GamingMouse());
+        allItems.add(new RubberDuck());
+        allItems.add(new Chip());
         allItems.add(new HardHat());
     }
 
