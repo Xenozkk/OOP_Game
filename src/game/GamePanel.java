@@ -560,13 +560,26 @@ public class GamePanel extends JPanel implements Runnable {
     private void drawTitleScreen(Graphics g) {
         drawMenuBackground(g);
 
-        // วาดชื่อเกม
-        g.setColor(new Color(0, 0, 0, 150)); // เงาดำ
+        // วาดชื่อเกม พร้อม Outline สีดำ
         g.setFont(new Font("Arial", Font.BOLD, 62));
-        g.drawString("THE SURVIVOR", 145, 255);
+
+        String title = "THE SURVIVOR";
+        int x = 165;
+        int y = 255;
+
+        // วาดขอบสีดำรอบตัวอักษร
+        g.setColor(Color.BLACK);
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                if (dx != 0 || dy != 0) {
+                    g.drawString(title, x + dx, y + dy);
+                }
+            }
+        }
+
+        // วาดตัวอักษรสีขาวทับด้านบน
         g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 60));
-        g.drawString("THE SURVIVOR", 140, 250);
+        g.drawString(title, x, y);
 
         // วาดปุ่ม START
         g.setColor(new Color(40, 40, 40, 200));
@@ -599,9 +612,27 @@ public class GamePanel extends JPanel implements Runnable {
             }
         }
 
-        g.setColor(Color.WHITE);
+        drawMenuBackground(g);
+
+        // วาดชื่อเกม พร้อม Outline สีดำ
         g.setFont(new Font("Arial", Font.BOLD, 40));
-        g.drawString("Select Character", 240, 150);
+
+        String title = "Select Character";
+        int x = 250;
+        int y = 150;
+
+        // วาดขอบสีดำรอบตัวอักษร
+        g.setColor(Color.BLACK);
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                if (dx != 0 || dy != 0) {
+                    g.drawString(title, x + dx, y + dy);
+                }
+            }
+        }
+        // วาดตัวอักษรสีขาวทับด้านบน
+        g.setColor(Color.WHITE);
+        g.drawString(title, x, y);
 
         // Knight (Formerly Tank)
         g.setColor(Color.GRAY);
@@ -650,9 +681,27 @@ public class GamePanel extends JPanel implements Runnable {
             pistolImageUI = loadAsset("/assets/weapons/pistol.png");
         }
 
-        g.setColor(Color.WHITE);
+        drawMenuBackground(g);
+
+        // วาดชื่อเกม พร้อม Outline สีดำ
         g.setFont(new Font("Arial", Font.BOLD, 40));
-        g.drawString("Select Weapon", 260, 150);
+
+        String title = "Select Weapon";
+        int x = 265;
+        int y = 150;
+
+        // วาดขอบสีดำรอบตัวอักษร
+        g.setColor(Color.BLACK);
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                if (dx != 0 || dy != 0) {
+                    g.drawString(title, x + dx, y + dy);
+                }
+            }
+        }
+        // วาดตัวอักษรสีขาวทับด้านบน
+        g.setColor(Color.WHITE);
+        g.drawString(title, x, y);
 
         // Sword
         g.setColor(Color.GRAY);
