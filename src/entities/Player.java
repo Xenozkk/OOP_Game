@@ -50,12 +50,27 @@ public class Player extends Entity {
             if (resource != null) {
                 return ImageIO.read(resource);
             }
+        } catch (Exception ignored) {}
 
-            return ImageIO.read(new File("assets/characters/" + new File(imagePath).getName()));
-        } catch (IOException e) {
-            System.err.println("Unable to load player image: " + imagePath);
-            return null;
+        String clean = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+        String fileName = new File(imagePath).getName();
+        String[] fallbackPaths = {
+            clean,
+            "assets/characters/" + fileName,
+            "/Users/xenoz/Game_OOP/assets/characters/" + fileName,
+            System.getProperty("user.dir") + "/assets/characters/" + fileName
+        };
+        for (String p : fallbackPaths) {
+            try {
+                File f = new File(p);
+                if (f.exists()) {
+                    return ImageIO.read(f);
+                }
+            } catch (Exception ignored) {}
         }
+
+        System.err.println("Unable to load player image: " + imagePath);
+        return null;
     }
     
     private void loadPlayerSprite() {
@@ -71,11 +86,21 @@ public class Player extends Entity {
 
         try {
             sprites = new BufferedImage[4][4]; // 4 ทิศทาง, 4 เฟรม
-            int sourceOffsetX = knightSprite ? 448 : 0;
-            int sourceOffsetY = knightSprite ? 416 : 0;
-            int[] sourceRows = knightSprite
-                ? new int[] { 0, 2, 2, 1 }
-                : new int[] { 0, 1, 2, 3 };
+            int sourceOffsetX = 0;
+            int sourceOffsetY = 0;
+            int[] sourceRows = new int[] { 0, 1, 2, 3 };
+
+            if (knightSprite) {
+                if (spriteSheet.getWidth() >= 480 && spriteSheet.getHeight() >= 448) {
+                    sourceOffsetX = 448;
+                    sourceOffsetY = 416;
+                    sourceRows = new int[] { 0, 2, 2, 1 };
+                } else {
+                    sourceOffsetX = 0;
+                    sourceOffsetY = 0;
+                    sourceRows = new int[] { 0, 2, 2, 1 };
+                }
+            }
 
             for (int dir = 0; dir < 4; dir++) {
                 for (int frame = 0; frame < 4; frame++) {
@@ -126,14 +151,14 @@ public class Player extends Entity {
         if (keyH.downPressed) { dy += 1; direction = 0; isMoving = true; }
         if (keyH.leftPressed) {
             dx -= 1;
-            direction = 2;
-            facingRight = true;
+            direction = 1; // 1 = ซ้าย
+            facingRight = false;
             isMoving = true;
         }
         if (keyH.rightPressed) {
             dx += 1;
-            direction = 1;
-            facingRight = false;
+            direction = 2; // 2 = ขวา
+            facingRight = true;
             isMoving = true;
         }
         
@@ -208,7 +233,7 @@ public class Player extends Entity {
         if (sprites != null && sprites[direction][spriteNum] != null) {
             // ขยายขนาด 32x32 ให้เป็น 40x40 (หรือตามที่ปรับ) บนหน้าจอ
             BufferedImage sprite = sprites[direction][spriteNum];
-            if (knightSprite && direction == 2) {
+            if (knightSprite && direction == 1) { // 1 = หันซ้าย (Flip แนวนอน)
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.translate((int)x + width, (int)y);
                 g2d.scale(-1, 1);

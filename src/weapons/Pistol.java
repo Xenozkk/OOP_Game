@@ -60,23 +60,23 @@ public class Pistol extends Weapon {
     }
 
     private void loadShootAnimation() {
-        String path = "assets/weapons/pistol-animatiom/"
-            + "[SHOOT WITH CASING AND MUZZLE FLASH] Glock - P80.png";
-        File file = new File(path);
+        String relativePath = "assets/weapons/pistol-animatiom/[SHOOT WITH CASING AND MUZZLE FLASH] Glock - P80.png";
+        String[] fallbackPaths = {
+            relativePath,
+            "/Users/xenoz/Game_OOP/" + relativePath,
+            System.getProperty("user.dir") + "/" + relativePath
+        };
 
-        if (!file.exists()) {
-            System.err.println("Unable to load pistol shooting animation: " + path);
-            return;
+        for (String p : fallbackPaths) {
+            try {
+                File file = new File(p);
+                if (file.exists()) {
+                    shootAnimation = ImageIO.read(file);
+                    return;
+                }
+            } catch (Exception ignored) {}
         }
-
-        try {
-            shootAnimation = ImageIO.read(file);
-        } catch (IOException exception) {
-            System.err.println(
-                "Unable to load pistol shooting animation: "
-                    + exception.getMessage()
-            );
-        }
+        System.err.println("Unable to load pistol shooting animation: " + relativePath);
     }
 
     @Override

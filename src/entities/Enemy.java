@@ -101,12 +101,27 @@ public class Enemy extends Entity {
             if (resource != null) {
                 return ImageIO.read(resource);
             }
+        } catch (Exception ignored) {}
 
-            return ImageIO.read(new File("assets/characters/" + new File(imagePath).getName()));
-        } catch (IOException e) {
-            System.err.println("Unable to load enemy image: " + imagePath);
-            return null;
+        String clean = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+        String fileName = new File(imagePath).getName();
+        String[] fallbackPaths = {
+            clean,
+            "assets/characters/" + fileName,
+            "/Users/xenoz/Game_OOP/assets/characters/" + fileName,
+            System.getProperty("user.dir") + "/assets/characters/" + fileName
+        };
+        for (String p : fallbackPaths) {
+            try {
+                File f = new File(p);
+                if (f.exists()) {
+                    return ImageIO.read(f);
+                }
+            } catch (Exception ignored) {}
         }
+
+        System.err.println("Unable to load enemy image: " + imagePath);
+        return null;
     }
 
     @Override

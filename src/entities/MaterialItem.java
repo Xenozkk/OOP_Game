@@ -42,14 +42,28 @@ public class MaterialItem extends GameObject {
     }
 
     private static void loadMoneySprite() {
-        try (InputStream resource = MaterialItem.class.getResourceAsStream(
-                "/assets/items/money.png")) {
-            moneySprite = resource != null
-                ? ImageIO.read(resource)
-                : ImageIO.read(new File("assets/items/money.png"));
-        } catch (IOException e) {
-            System.err.println("Unable to load money image");
+        try (InputStream resource = MaterialItem.class.getResourceAsStream("/assets/items/money.png")) {
+            if (resource != null) {
+                moneySprite = ImageIO.read(resource);
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        String[] fallbackPaths = {
+            "assets/items/money.png",
+            "/Users/xenoz/Game_OOP/assets/items/money.png",
+            System.getProperty("user.dir") + "/assets/items/money.png"
+        };
+        for (String p : fallbackPaths) {
+            try {
+                File f = new File(p);
+                if (f.exists()) {
+                    moneySprite = ImageIO.read(f);
+                    return;
+                }
+            } catch (Exception ignored) {}
         }
+        System.err.println("Unable to load money image");
     }
 
     public void magnetize(Player p) {

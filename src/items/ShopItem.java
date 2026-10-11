@@ -4,6 +4,7 @@ import stats.PlayerStats;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
 
 /**
@@ -23,9 +24,18 @@ public abstract class ShopItem {
     }
 
     protected void loadImage(String imagePath) {
+        String clean = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+        try (InputStream resource = ShopItem.class.getResourceAsStream("/" + clean)) {
+            if (resource != null) {
+                this.image = ImageIO.read(resource);
+                return;
+            }
+        } catch (Exception ignored) {}
+
         String[] paths = {
-            imagePath,
-            "/Users/xenoz/Game_OOP/" + imagePath
+            clean,
+            "/Users/xenoz/Game_OOP/" + clean,
+            System.getProperty("user.dir") + "/" + clean
         };
         for (String path : paths) {
             try {

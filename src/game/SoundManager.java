@@ -35,7 +35,6 @@ public final class SoundManager {
     private static final Map<Effect, Clip> clips = new EnumMap<>(Effect.class);
     private static final Random random = new Random();
     private static final String[] MENU_MUSIC = {
-        "BGSound1.wav",
         "BGSound2.wav",
         "BGSound3.wav"
     };
@@ -46,6 +45,7 @@ public final class SoundManager {
     private static Clip musicClip;
     private static MusicCategory musicCategory;
     private static boolean enabled = true;
+    private static boolean isMusicLoading = false;
 
     private enum MusicCategory {
         MENU,
@@ -88,10 +88,9 @@ public final class SoundManager {
 
         if (requestedCategory == null) {
             stopMusic();
-        } else if (requestedCategory != musicCategory
-                || musicClip == null
-                || !musicClip.isOpen()) {
-            playRandomMusic(requestedCategory);
+        } else if (requestedCategory != musicCategory && !isMusicLoading) {
+            musicCategory = requestedCategory;
+            new Thread(() -> playRandomMusic(requestedCategory)).start();
         }
     }
 
@@ -110,6 +109,7 @@ public final class SoundManager {
     }
 
     private static void playRandomMusic(MusicCategory category) {
+        isMusicLoading = true;
         stopMusic();
 
         String[] candidates = category == MusicCategory.FIGHT
@@ -125,11 +125,13 @@ public final class SoundManager {
                 musicCategory = category;
                 musicClip.loop(Clip.LOOP_CONTINUOUSLY);
                 musicClip.start();
+                isMusicLoading = false;
                 return;
             }
         }
 
         System.err.println("Unable to load music for category " + category);
+        isMusicLoading = false;
     }
 
     private static void stopMusic() {
@@ -145,17 +147,28 @@ public final class SoundManager {
         String resourcePath = "/assets/sounds/bg/" + fileName;
 
         try {
-            AudioInputStream audioStream;
+            AudioInputStream audioStream = null;
             InputStream resource = SoundManager.class.getResourceAsStream(resourcePath);
 
             if (resource != null) {
                 audioStream = AudioSystem.getAudioInputStream(resource);
             } else {
-                File file = new File("assets/sounds/bg/" + fileName);
-                if (!file.exists()) {
-                    return null;
+                String[] fallbackPaths = {
+                    "assets/sounds/bg/" + fileName,
+                    "/Users/xenoz/Game_OOP/assets/sounds/bg/" + fileName,
+                    System.getProperty("user.dir") + "/assets/sounds/bg/" + fileName
+                };
+                for (String p : fallbackPaths) {
+                    File file = new File(p);
+                    if (file.exists()) {
+                        audioStream = AudioSystem.getAudioInputStream(file);
+                        break;
+                    }
                 }
-                audioStream = AudioSystem.getAudioInputStream(file);
+            }
+
+            if (audioStream == null) {
+                return null;
             }
 
             Clip clip = AudioSystem.getClip();
@@ -187,15 +200,28 @@ public final class SoundManager {
         String resourcePath = "/assets/sounds/" + effect.fileName;
 
         try {
-            AudioInputStream audioStream;
+            AudioInputStream audioStream = null;
             InputStream resource = SoundManager.class.getResourceAsStream(resourcePath);
 
             if (resource != null) {
                 audioStream = AudioSystem.getAudioInputStream(resource);
             } else {
-                audioStream = AudioSystem.getAudioInputStream(
-                    new File("assets/sounds/" + effect.fileName)
-                );
+                String[] fallbackPaths = {
+                    "assets/sounds/" + effect.fileName,
+                    "/Users/xenoz/Game_OOP/assets/sounds/" + effect.fileName,
+                    System.getProperty("user.dir") + "/assets/sounds/" + effect.fileName
+                };
+                for (String p : fallbackPaths) {
+                    File file = new File(p);
+                    if (file.exists()) {
+                        audioStream = AudioSystem.getAudioInputStream(file);
+                        break;
+                    }
+                }
+            }
+
+            if (audioStream == null) {
+                return null;
             }
 
             Clip clip = AudioSystem.getClip();
