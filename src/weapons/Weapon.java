@@ -16,6 +16,7 @@ public abstract class Weapon {
     
     // ตำแหน่งของอาวุธ (แปะไว้รอบๆ ตัวผู้เล่น)
     protected float weaponX, weaponY;
+    protected boolean facingRight = true;
 
     public Weapon(int damage, int cooldown, int range) {
         this.damage = damage;
@@ -24,6 +25,8 @@ public abstract class Weapon {
     }
 
     public void update(entities.Player player, ArrayList<Enemy> enemies) {
+        facingRight = player.isFacingRight();
+
         // 1. อัปเดตตำแหน่งรูปอาวุธให้แปะอยู่รอบผู้เล่นก่อน
         updatePosition(player, enemies);
 

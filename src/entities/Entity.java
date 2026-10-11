@@ -1,5 +1,7 @@
 package entities;
 
+import game.SoundManager;
+
 /**
  * Base class for all living things (Player, Enemies).
  * Demonstrates Inheritance from GameObject.
@@ -18,6 +20,7 @@ public abstract class Entity extends GameObject {
 
     public void takeDamage(int damage) {
         this.hp -= damage;
+        SoundManager.play(SoundManager.Effect.HURT);
         System.out.println("Entity took " + damage + " damage. HP left: " + this.hp);
         if (this.hp <= 0) {
             die();

@@ -8,6 +8,7 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.util.ArrayList;
 import entities.Enemy;
+import game.SoundManager;
 
 /**
  * อาวุธปืน (Ranged Weapon)
@@ -17,8 +18,12 @@ import entities.Enemy;
 public class Pistol extends Weapon {
 
     private BufferedImage pistolImage;
-    private boolean facingRight = true;
-
+    private BufferedImage shootAnimation;
+    private int animationFrame;
+    private int animationTimer;
+    private static final int ANIMATION_FRAME_WIDTH = 48;
+    private static final int ANIMATION_FRAME_HEIGHT = 48;
+    private static final int ANIMATION_FRAME_DELAY = 2;
     private float recoilOffset = 0f;
     private static final float MAX_RECOIL = 8f;
     private static final float RECOIL_SPEED = 1.5f;
@@ -34,6 +39,8 @@ public class Pistol extends Weapon {
     }
 
     private void loadImage() {
+        loadShootAnimation();
+
         String[] paths = {
             "assets/weapons/pistol.png",
             "../../assets/weapons/pistol.png",
@@ -52,6 +59,26 @@ public class Pistol extends Weapon {
         System.out.println("⚠️ ไม่พบรูปปืน ใช้ Fallback แทน");
     }
 
+    private void loadShootAnimation() {
+        String path = "assets/weapons/pistol-animatiom/"
+            + "[SHOOT WITH CASING AND MUZZLE FLASH] Glock - P80.png";
+        File file = new File(path);
+
+        if (!file.exists()) {
+            System.err.println("Unable to load pistol shooting animation: " + path);
+            return;
+        }
+
+        try {
+            shootAnimation = ImageIO.read(file);
+        } catch (IOException exception) {
+            System.err.println(
+                "Unable to load pistol shooting animation: "
+                    + exception.getMessage()
+            );
+        }
+    }
+
     @Override
     protected void attack(entities.Player player, ArrayList<Enemy> enemies) {
         Enemy nearest = findNearest(player, enemies);
@@ -66,7 +93,10 @@ public class Pistol extends Weapon {
             
             // 👑 ส่งดาเมจที่บวกโบนัสแล้วให้กระสุน
             bullets.add(new Projectile(muzzleX, muzzleY, targetX, targetY, getCalculatedDamage(player)));
+            SoundManager.play(SoundManager.Effect.SHOOT);
             recoilOffset = MAX_RECOIL;
+            animationFrame = 0;
+            animationTimer = getAnimationFrameCount() * ANIMATION_FRAME_DELAY;
         }
     }
 
@@ -85,10 +115,13 @@ public class Pistol extends Weapon {
 
     @Override
     protected void updatePosition(entities.Player player, ArrayList<Enemy> enemies) {
-        // เช็คว่าศัตรูที่ใกล้สุดอยู่ซ้ายหรือขวา
-        Enemy nearest = findNearest(player, enemies);
-        if (nearest != null) {
-            facingRight = nearest.getX() >= player.getX();
+        if (animationTimer > 0) {
+            animationTimer--;
+            if (animationTimer % ANIMATION_FRAME_DELAY == 0) {
+                animationFrame++;
+            }
+        } else {
+            animationFrame = 0;
         }
 
         // Recoil ฟื้นตัว
@@ -122,13 +155,17 @@ public class Pistol extends Weapon {
             // Flip รูปในแนวนอน
             g2d.translate(weaponX + GUN_W, weaponY);
             g2d.scale(-1, 1);
-            if (pistolImage != null) {
+            if (hasActiveAnimation()) {
+                drawAnimationFrame(g2d);
+            } else if (pistolImage != null) {
                 g2d.drawImage(pistolImage, 0, 0, GUN_W, GUN_H, null);
             } else {
                 drawFallback(g2d);
             }
         } else {
-            if (pistolImage != null) {
+            if (hasActiveAnimation()) {
+                drawAnimationFrame(g2d);
+            } else if (pistolImage != null) {
                 g2d.drawImage(pistolImage, (int)weaponX, (int)weaponY, GUN_W, GUN_H, null);
             } else {
                 g2d.translate(weaponX, weaponY);
@@ -142,6 +179,38 @@ public class Pistol extends Weapon {
         for (Projectile p : bullets) {
             p.render(g2d);
         }
+    }
+
+    private boolean hasActiveAnimation() {
+        return shootAnimation != null && animationTimer > 0;
+    }
+
+    private int getAnimationFrameCount() {
+        return shootAnimation == null
+            ? 0
+            : shootAnimation.getWidth() / ANIMATION_FRAME_WIDTH;
+    }
+
+    private void drawAnimationFrame(Graphics2D g2d) {
+        int frameCount = getAnimationFrameCount();
+        if (frameCount == 0) {
+            return;
+        }
+
+        int frame = Math.min(animationFrame, frameCount - 1);
+        int sourceX = frame * ANIMATION_FRAME_WIDTH;
+        g2d.drawImage(
+            shootAnimation,
+            0,
+            0,
+            GUN_W,
+            GUN_H,
+            sourceX,
+            0,
+            sourceX + ANIMATION_FRAME_WIDTH,
+            ANIMATION_FRAME_HEIGHT,
+            null
+        );
     }
 
     private void drawFallback(Graphics2D g2d) {
@@ -163,6 +232,7 @@ public class Pistol extends Weapon {
                               
                 if (hit) {
                     e.takeDamage(p.getDamage());
+                    SoundManager.play(SoundManager.Effect.HIT);
                     toRemove.add(p);
                     break;
                 }

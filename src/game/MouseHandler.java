@@ -13,6 +13,8 @@ public class MouseHandler extends MouseAdapter {
 
     @Override
     public void mousePressed(MouseEvent e) {
+        SoundManager.play(SoundManager.Effect.BUTTON);
+
         int mx = e.getX();
         int my = e.getY();
 

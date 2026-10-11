@@ -5,9 +5,11 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
 import java.util.ArrayList;
 import entities.Enemy;
+import game.SoundManager;
 
 /**
  * อาวุธดาบ (Melee Weapon)
@@ -39,23 +41,14 @@ public class Sword extends Weapon {
     }
 
     private void loadImage() {
-        // ลอง path ต่างๆ เผื่อ working directory ต่างกัน
-        String[] paths = {
-            "assets/weapons/sword.png",
-            "../../assets/weapons/sword.png",
-            "/Users/xenoz/Game_OOP/assets/weapons/sword.png"
-        };
-        for (String path : paths) {
-            try {
-                File f = new File(path);
-                if (f.exists()) {
-                    swordImage = ImageIO.read(f);
-                    System.out.println("✅ โหลดรูปดาบสำเร็จจาก: " + path);
-                    return;
-                }
-            } catch (IOException e) { /* ลองต่อ */ }
+        try (InputStream resource = Sword.class.getResourceAsStream(
+                "/assets/weapons/sword.png")) {
+            swordImage = resource != null
+                ? ImageIO.read(resource)
+                : ImageIO.read(new File("assets/weapons/sword.png"));
+        } catch (IOException e) {
+            System.err.println("Unable to load sword image");
         }
-        System.out.println("⚠️ ไม่พบรูปดาบ ใช้ Fallback แทน");
     }
 
     @Override
@@ -82,12 +75,15 @@ public class Sword extends Weapon {
             lungeProgress = 0f;
             state = SwordState.LUNGING;
             target.takeDamage(getCalculatedDamage(player)); // 👑 ใช้โบนัสดาเมจ
+            SoundManager.play(SoundManager.Effect.HIT);
         }
     }
 
     @Override
     protected void updatePosition(entities.Player player, ArrayList<Enemy> enemies) {
-        float homeX = player.getX() + HOME_OFFSET_X;
+        float homeX = facingRight
+            ? player.getX() + HOME_OFFSET_X
+            : player.getX() + player.getWidth() - HOME_OFFSET_X - SWORD_W;
         float homeY = player.getY() + HOME_OFFSET_Y;
 
         switch (state) {
@@ -125,23 +121,25 @@ public class Sword extends Weapon {
     @Override
     public void render(Graphics2D g2d) {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        java.awt.geom.AffineTransform original = g2d.getTransform();
-
-        // หมุนดาบทำมุม 45 องศาแบบตายตัว (แนวเฉียง เหมือนในรูป)
-        g2d.rotate(Math.toRadians(-45), weaponX + SWORD_W / 2.0, weaponY + SWORD_H / 2.0);
 
         if (swordImage != null) {
-            g2d.drawImage(swordImage, (int)weaponX, (int)weaponY, SWORD_W, SWORD_H, null);
+            if (facingRight) {
+                g2d.drawImage(swordImage, (int)weaponX, (int)weaponY,
+                    SWORD_W, SWORD_H, null);
+            } else {
+                java.awt.geom.AffineTransform original = g2d.getTransform();
+                g2d.translate(weaponX + SWORD_W, weaponY);
+                g2d.scale(-1, 1);
+                g2d.drawImage(swordImage, 0, 0, SWORD_W, SWORD_H, null);
+                g2d.setTransform(original);
+            }
         } else {
             g2d.setColor(new java.awt.Color(180, 200, 220));
             g2d.fillRect((int)weaponX, (int)weaponY, SWORD_W, SWORD_H);
         }
-
-        g2d.setTransform(original);
     }
 
     // --- Helper Math ---
     private float lerp(float a, float b, float t) { return a + (b - a) * t; }
     private float easeOut(float t) { return 1 - (1 - t) * (1 - t); }
 }
-

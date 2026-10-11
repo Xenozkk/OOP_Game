@@ -5,6 +5,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
 import java.util.ArrayList;
 
@@ -94,6 +96,19 @@ public class Enemy extends Entity {
         return 1;
     }
 
+    private static BufferedImage loadImage(String imagePath) {
+        try (InputStream resource = Enemy.class.getResourceAsStream(imagePath)) {
+            if (resource != null) {
+                return ImageIO.read(resource);
+            }
+
+            return ImageIO.read(new File("assets/characters/" + new File(imagePath).getName()));
+        } catch (IOException e) {
+            System.err.println("Unable to load enemy image: " + imagePath);
+            return null;
+        }
+    }
+
     @Override
     public void update() {
         if (player == null) {
@@ -170,18 +185,22 @@ public class Enemy extends Entity {
     @Override
     public void render(Graphics g) {
         BufferedImage img = null;
-        try {
-            if (type == Type.CHASER) {
-                if (chaserImg == null) chaserImg = ImageIO.read(new File("/Users/xenoz/Game_OOP/assets/characters/enemy_chaser.png"));
-                img = chaserImg;
-            } else if (type == Type.RUNNER) {
-                if (runnerImg == null) runnerImg = ImageIO.read(new File("/Users/xenoz/Game_OOP/assets/characters/enemy_runner.png"));
-                img = runnerImg;
-            } else if (type == Type.SHOOTER) {
-                if (shooterImg == null) shooterImg = ImageIO.read(new File("/Users/xenoz/Game_OOP/assets/characters/enemy_shooter.png"));
-                img = shooterImg;
+        if (type == Type.CHASER) {
+            if (chaserImg == null) {
+                chaserImg = loadImage("/assets/characters/enemy_chaser.png");
             }
-        } catch (Exception e) {}
+            img = chaserImg;
+        } else if (type == Type.RUNNER) {
+            if (runnerImg == null) {
+                runnerImg = loadImage("/assets/characters/enemy_runner.png");
+            }
+            img = runnerImg;
+        } else if (type == Type.SHOOTER) {
+            if (shooterImg == null) {
+                shooterImg = loadImage("/assets/characters/enemy_shooter.png");
+            }
+            img = shooterImg;
+        }
 
         if (img != null && player != null) {
             Graphics2D g2d = (Graphics2D) g.create();

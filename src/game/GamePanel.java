@@ -11,9 +11,13 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
+import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 import stats.PlayerStats;
 
@@ -138,6 +142,9 @@ public class GamePanel extends JPanel implements Runnable {
     // --------------------------------------------------
 
     public void update() {
+        updateMenuBackground();
+        SoundManager.updateMusic(currentState);
+
         if (currentState != GameState.PLAYING) {
             return;
         }
@@ -334,6 +341,7 @@ public class GamePanel extends JPanel implements Runnable {
             // เก็บ Materials
             if (distance < 15) {
                 player.getStats().addMaterials(material.getValue());
+                material.playPickupSound();
                 materialIterator.remove();
             }
         }
@@ -345,10 +353,12 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void finishWave() {
         if (currentWave >= MAX_WAVE) {
+            SoundManager.play(SoundManager.Effect.VICTORY_10_WAVE);
             currentState = GameState.GAME_OVER;
             return;
         }
         
+        SoundManager.play(SoundManager.Effect.LEVEL_UP);
         currentState = GameState.SHOP;
 
         enemies.clear();
@@ -367,6 +377,7 @@ public class GamePanel extends JPanel implements Runnable {
     // เรียกจาก MouseHandler เมื่อกด Next Wave
     public void nextWave() {
         if (currentWave >= MAX_WAVE) {
+            SoundManager.play(SoundManager.Effect.VICTORY_10_WAVE);
             currentState = GameState.GAME_OVER;
             return;
         }
@@ -374,6 +385,7 @@ public class GamePanel extends JPanel implements Runnable {
         currentWave++;
         waveTimer = 30 * FPS;
         frameCount = 0;
+        SoundManager.play(SoundManager.Effect.LEVEL_UP);
 
         // อัปเดต MaxHP จากของที่ซื้อ และฟื้นฟูเลือดให้เต็ม
         player.syncStats();
@@ -470,20 +482,81 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     private BufferedImage titleBgImage;
+    private int menuBackgroundOffset = 0;
+    private static final int MENU_BACKGROUND_SPEED = 1;
 
-    private void drawTitleScreen(Graphics g) {
+    private BufferedImage loadAsset(String assetPath) {
+        try (InputStream resource = GamePanel.class.getResourceAsStream(assetPath)) {
+            if (resource != null) {
+                return ImageIO.read(resource);
+            }
+
+            return ImageIO.read(new File(assetPath.substring(1)));
+        } catch (IOException e) {
+            System.err.println("Unable to load menu image: " + assetPath);
+            return null;
+        }
+    }
+
+    private BufferedImage loadSwordSelectionImage() {
+        return loadAsset("/assets/weapons/sword.png");
+    }
+
+    private void updateMenuBackground() {
         if (titleBgImage == null) {
-            try {
-                titleBgImage = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/bg/title_bg.png"));
-            } catch (Exception e) { e.printStackTrace(); }
+            titleBgImage = loadAsset("/assets/bg/title_bg.png");
         }
 
-        if (titleBgImage != null) {
-            g.drawImage(titleBgImage, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, null);
-        } else {
+        if (titleBgImage == null) {
+            return;
+        }
+
+        int backgroundWidth = getMenuBackgroundWidth();
+        menuBackgroundOffset -= MENU_BACKGROUND_SPEED;
+        if (menuBackgroundOffset <= -backgroundWidth) {
+            menuBackgroundOffset += backgroundWidth;
+        }
+    }
+
+    private int getMenuBackgroundWidth() {
+        return (int) Math.ceil(
+            (double) titleBgImage.getWidth() * SCREEN_HEIGHT
+                / titleBgImage.getHeight()
+        );
+    }
+
+    private void drawMenuBackground(Graphics g) {
+        if (titleBgImage == null) {
+            titleBgImage = loadAsset("/assets/bg/title_bg.png");
+        }
+
+        if (titleBgImage == null) {
             g.setColor(Color.DARK_GRAY);
             g.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+            return;
         }
+
+        int backgroundWidth = getMenuBackgroundWidth();
+        g.drawImage(
+            titleBgImage,
+            menuBackgroundOffset,
+            0,
+            backgroundWidth,
+            SCREEN_HEIGHT,
+            null
+        );
+        g.drawImage(
+            titleBgImage,
+            menuBackgroundOffset + backgroundWidth,
+            0,
+            backgroundWidth,
+            SCREEN_HEIGHT,
+            null
+        );
+    }
+
+    private void drawTitleScreen(Graphics g) {
+        drawMenuBackground(g);
 
         // วาดชื่อเกม
         g.setColor(new Color(0, 0, 0, 150)); // เงาดำ
@@ -506,20 +579,22 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage knightImage;
 
     private void drawCharSelectScreen(Graphics g) {
+        drawMenuBackground(g);
         drawBackButton(g);
 
         if (speedyImage == null) {
-            try {
-                BufferedImage sheet = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/characters/player_sheet.png"));
+            BufferedImage sheet = loadAsset("/assets/characters/player_sheet.png");
+            if (sheet != null) {
                 speedyImage = sheet.getSubimage(0, 0, 32, 32); 
-            } catch (Exception e) {}
+            }
         }
         
         if (knightImage == null) {
-            try {
-                BufferedImage sheet = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/characters/knight_sheet.png"));
-                knightImage = sheet.getSubimage(0, 0, 32, 32); 
-            } catch (Exception e) {}
+            BufferedImage sheet = loadAsset("/assets/characters/knight_sheet.png");
+            if (sheet != null && sheet.getWidth() >= 480
+                    && sheet.getHeight() >= 448) {
+                knightImage = sheet.getSubimage(448, 416, 32, 32);
+            }
         }
 
         g.setColor(Color.WHITE);
@@ -563,15 +638,14 @@ public class GamePanel extends JPanel implements Runnable {
     private BufferedImage pistolImageUI;
 
     private void drawWeaponSelectScreen(Graphics g) {
+        drawMenuBackground(g);
         drawBackButton(g);
         
         if (swordImageUI == null) {
-            try { swordImageUI = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/weapons/sword.png")); } 
-            catch (Exception e) {}
+            swordImageUI = loadSwordSelectionImage();
         }
         if (pistolImageUI == null) {
-            try { pistolImageUI = javax.imageio.ImageIO.read(new java.io.File("/Users/xenoz/Game_OOP/assets/weapons/pistol.png")); } 
-            catch (Exception e) {}
+            pistolImageUI = loadAsset("/assets/weapons/pistol.png");
         }
 
         g.setColor(Color.WHITE);

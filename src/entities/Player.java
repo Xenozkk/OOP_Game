@@ -4,13 +4,17 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.awt.image.RasterFormatException;
 import javax.imageio.ImageIO;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import stats.PlayerStats;
 import game.KeyHandler;
 import game.GamePanel;
 import game.GameState;
+import game.SoundManager;
 import weapons.Weapon;
 import weapons.Pistol;
 
@@ -26,6 +30,8 @@ public class Player extends Entity {
     private int spriteNum = 0;
     private int direction = 0; // 0=Down, 1=Left, 2=Right, 3=Up
     private boolean isMoving = false;
+    private boolean knightSprite = false;
+    private boolean facingRight = true;
     
     // คลังอาวุธของผู้เล่น (Inventory)
     public ArrayList<Weapon> inventory = new ArrayList<>();
@@ -38,27 +44,60 @@ public class Player extends Entity {
         
         loadPlayerSprite();
     }
+
+    private BufferedImage loadImage(String imagePath) {
+        try (InputStream resource = Player.class.getResourceAsStream(imagePath)) {
+            if (resource != null) {
+                return ImageIO.read(resource);
+            }
+
+            return ImageIO.read(new File("assets/characters/" + new File(imagePath).getName()));
+        } catch (IOException e) {
+            System.err.println("Unable to load player image: " + imagePath);
+            return null;
+        }
+    }
     
     private void loadPlayerSprite() {
+        knightSprite = gp.selectedChar == 1;
+        String sheetPath = knightSprite
+            ? "/assets/characters/knight_sheet.png"
+            : "/assets/characters/player_sheet.png";
+
+        BufferedImage spriteSheet = loadImage(sheetPath);
+        if (spriteSheet == null) {
+            return;
+        }
+
         try {
-            String sheetPath = gp.selectedChar == 1 
-                ? "/Users/xenoz/Game_OOP/assets/characters/knight_sheet.png" 
-                : "/Users/xenoz/Game_OOP/assets/characters/player_sheet.png";
-                
-            BufferedImage spriteSheet = ImageIO.read(new File(sheetPath));
             sprites = new BufferedImage[4][4]; // 4 ทิศทาง, 4 เฟรม
+            int sourceOffsetX = knightSprite ? 448 : 0;
+            int sourceOffsetY = knightSprite ? 416 : 0;
+            int[] sourceRows = knightSprite
+                ? new int[] { 0, 2, 2, 1 }
+                : new int[] { 0, 1, 2, 3 };
+
             for (int dir = 0; dir < 4; dir++) {
                 for (int frame = 0; frame < 4; frame++) {
-                    sprites[dir][frame] = spriteSheet.getSubimage(frame * 32, dir * 32, 32, 32);
+                    sprites[dir][frame] = spriteSheet.getSubimage(
+                        sourceOffsetX + frame * 32,
+                        sourceOffsetY + sourceRows[dir] * 32,
+                        32,
+                        32
+                    );
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (RasterFormatException e) {
+            System.err.println("Invalid player sprite sheet dimensions: " + sheetPath);
         }
     }
     
     public PlayerStats getStats() {
         return stats;
+    }
+
+    public boolean isFacingRight() {
+        return facingRight;
     }
     
     public void syncStats() {
@@ -85,8 +124,18 @@ public class Player extends Entity {
         isMoving = false;
         if (keyH.upPressed) { dy -= 1; direction = 3; isMoving = true; }
         if (keyH.downPressed) { dy += 1; direction = 0; isMoving = true; }
-        if (keyH.leftPressed) { dx -= 1; direction = 1; isMoving = true; }
-        if (keyH.rightPressed) { dx += 1; direction = 2; isMoving = true; }
+        if (keyH.leftPressed) {
+            dx -= 1;
+            direction = 2;
+            facingRight = true;
+            isMoving = true;
+        }
+        if (keyH.rightPressed) {
+            dx += 1;
+            direction = 1;
+            facingRight = false;
+            isMoving = true;
+        }
         
         // Normalize speed for diagonal movement
         if (dx != 0 && dy != 0) {
@@ -158,7 +207,16 @@ public class Player extends Entity {
         
         if (sprites != null && sprites[direction][spriteNum] != null) {
             // ขยายขนาด 32x32 ให้เป็น 40x40 (หรือตามที่ปรับ) บนหน้าจอ
-            g.drawImage(sprites[direction][spriteNum], (int)x, (int)y, width, height, null);
+            BufferedImage sprite = sprites[direction][spriteNum];
+            if (knightSprite && direction == 2) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.translate((int)x + width, (int)y);
+                g2d.scale(-1, 1);
+                g2d.drawImage(sprite, 0, 0, width, height, null);
+                g2d.dispose();
+            } else {
+                g.drawImage(sprite, (int)x, (int)y, width, height, null);
+            }
         } else {
             renderFallback(g);
         }
@@ -180,7 +238,7 @@ public class Player extends Entity {
     @Override
     protected void die() {
         System.out.println("Player has died! Game Over.");
+        SoundManager.play(SoundManager.Effect.GAME_OVER);
         gp.currentState = GameState.GAME_OVER;
     }
 }
-
