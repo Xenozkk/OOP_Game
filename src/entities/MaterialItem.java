@@ -1,10 +1,13 @@
 package entities;
 
+import game.SoundManager;
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import javax.imageio.ImageIO;
 
 /**
@@ -23,8 +26,7 @@ public class MaterialItem extends GameObject {
     private int value;
 
     public MaterialItem(float x, float y, int value) {
-        // ขยายขนาดปึกเงินให้ใหญ่และเห็นชัดขึ้น
-        super(x, y, 32, 24); 
+        super(x, y, 32, 32);
         this.value = value;
         
         // โหลดรูปถ้ายังไม่เคยโหลด
@@ -40,22 +42,14 @@ public class MaterialItem extends GameObject {
     }
 
     private static void loadMoneySprite() {
-        String[] paths = {
-            "assets/items/money.png",
-            "../../assets/items/money.png",
-            "/Users/xenoz/Game_OOP/assets/items/money.png"
-        };
-        for (String path : paths) {
-            try {
-                File f = new File(path);
-                if (f.exists()) {
-                    moneySprite = ImageIO.read(f);
-                    System.out.println("✅ โหลดรูปเงินสำเร็จ: " + path);
-                    return;
-                }
-            } catch (IOException e) { /* ลองต่อ */ }
+        try (InputStream resource = MaterialItem.class.getResourceAsStream(
+                "/assets/items/money.png")) {
+            moneySprite = resource != null
+                ? ImageIO.read(resource)
+                : ImageIO.read(new File("assets/items/money.png"));
+        } catch (IOException e) {
+            System.err.println("Unable to load money image");
         }
-        System.out.println("⚠️ ไม่พบรูปเงิน ใช้ Fallback แทน");
     }
 
     public void magnetize(Player p) {
@@ -69,6 +63,10 @@ public class MaterialItem extends GameObject {
     
     public int getValue() {
         return value;
+    }
+
+    public void playPickupSound() {
+        SoundManager.play(SoundManager.Effect.PICKUP_COIN);
     }
 
     @Override
@@ -95,14 +93,7 @@ public class MaterialItem extends GameObject {
     public void render(Graphics g) {
         if (sprite != null) {
             java.awt.Graphics2D g2d = (java.awt.Graphics2D) g;
-            java.awt.geom.AffineTransform original = g2d.getTransform();
-            
-            // หมุน -90 องศา รอบจุดกึ่งกลางของปึกเงิน
-            g2d.rotate(Math.toRadians(-90), x + width / 2.0, y + height / 2.0);
-            
             g2d.drawImage(sprite, (int)x, (int)y, width, height, null);
-            
-            g2d.setTransform(original);
         } else {
             renderFallback(g);
         }
@@ -116,4 +107,3 @@ public class MaterialItem extends GameObject {
         g.drawOval((int)x, (int)y, width, height);
     }
 }
-

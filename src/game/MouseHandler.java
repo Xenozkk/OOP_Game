@@ -13,6 +13,8 @@ public class MouseHandler extends MouseAdapter {
 
     @Override
     public void mousePressed(MouseEvent e) {
+        SoundManager.play(SoundManager.Effect.BUTTON);
+
         int mx = e.getX();
         int my = e.getY();
 
@@ -125,6 +127,25 @@ public class MouseHandler extends MouseAdapter {
         // 5. Shop
         // ================================================
         else if (gp.currentState == GameState.SHOP) {
+            // CLOSE STATS
+            if (gp.showStats) {
+                if (mx >= 325 && mx <= 475
+                    && my >= 460 && my <= 500) {
+
+                    gp.showStats = false;
+            }
+
+                return;   
+            }
+
+            // OPEN STATS
+            if (mx >= 325 && mx <= 475
+                    && my >= 450 && my <= 510) {
+
+                gp.showStats = true;
+                return;
+            }
+
 
             int startX = 70;
             int gap = 30;

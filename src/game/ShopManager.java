@@ -35,15 +35,37 @@ public class ShopManager {
         rollItems();
     }
 
-    // สุ่มไอเทมลงสล็อต
+    // สุ่มไอเทมลงสล็อตแบบไม่ให้ซ้ำกัน
     private void rollItems() {
+        // สร้างลิตส์ชั่วคราวจากของทั้งหมด
+        ArrayList<ShopItem> temp = new ArrayList<>(allItems);
+        
+        // สุ่มของในลิตส์ชั่วคราว
+        java.util.Collections.shuffle(temp, rand);
+        
+        // หยิบ 3 ชิ้นแรกมาใส่ในร้าน
         for (int i = 0; i < currentItems.length; i++) {
-            currentItems[i] = allItems.get(rand.nextInt(allItems.size()));
+            if (i < temp.size()) {
+                currentItems[i] = temp.get(i);
+            }
         }
+    }
+
+    public boolean isShopEmpty() {
+        for (ShopItem item : currentItems) {
+            if (item != null) return false;
+        }
+        return true;
     }
 
     // ผู้เล่นกดปุ่ม Reroll
     public boolean reroll(PlayerStats stats) {
+        // ถ้าเหมาของหมดร้านแล้ว ให้รีฟรี 1 ครั้ง
+        if (isShopEmpty()) {
+            rollItems();
+            return true;
+        }
+        
         if (stats.spendMaterials(rerollCost)) {
             rollItems();
             rerollCost += 2; // กดแล้วแพงขึ้นทีละ 2 บาท

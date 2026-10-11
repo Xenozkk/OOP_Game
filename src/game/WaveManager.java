@@ -38,12 +38,6 @@ public class WaveManager {
             case SHOOTER:
                 return wave >= 3 ? 3 : 0;
 
-            case TANK:
-                return wave >= 4 ? 3 : 0;
-
-            case BRUTE:
-                return wave >= 6 ? 2 : 0;
-
             default:
                 return 0;
         }
@@ -138,28 +132,28 @@ public class WaveManager {
             return new Enemy.Type[] {
                 Enemy.Type.CHASER,
                 Enemy.Type.SHOOTER,
-                Enemy.Type.TANK
+                Enemy.Type.RUNNER
             };
         } else if (wave == 6) {
             return new Enemy.Type[] {
                 Enemy.Type.RUNNER,
                 Enemy.Type.RUNNER,
                 Enemy.Type.SHOOTER,
-                Enemy.Type.TANK
+                Enemy.Type.CHASER
             };
         } else if (wave == 7) {
             return new Enemy.Type[] {
                 Enemy.Type.CHASER,
                 Enemy.Type.RUNNER,
                 Enemy.Type.SHOOTER,
-                Enemy.Type.TANK,
-                Enemy.Type.BRUTE
+                Enemy.Type.RUNNER,
+                Enemy.Type.CHASER
             };
         } else if (wave == 8) {
             return new Enemy.Type[] {
-                Enemy.Type.TANK,
-                Enemy.Type.TANK,
-                Enemy.Type.BRUTE,
+                Enemy.Type.CHASER,
+                Enemy.Type.RUNNER,
+                Enemy.Type.CHASER,
                 Enemy.Type.SHOOTER
             };
         }
@@ -169,9 +163,9 @@ public class WaveManager {
             Enemy.Type.RUNNER,
             Enemy.Type.RUNNER,
             Enemy.Type.SHOOTER,
-            Enemy.Type.TANK,
-            Enemy.Type.BRUTE,
-            Enemy.Type.BRUTE
+            Enemy.Type.CHASER,
+            Enemy.Type.RUNNER,
+            Enemy.Type.SHOOTER
         };
     }
 }
