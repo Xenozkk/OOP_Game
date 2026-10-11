@@ -5,7 +5,7 @@ import javax.swing.JFrame;
 public class Main {
     public static void main(String[] args) {
         // สร้างหน้าต่างเกม
-        JFrame window = new JFrame("Brotato Clone - Java OOP Project");
+        JFrame window = new JFrame("The Suvivor");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         window.setResizable(false);
         

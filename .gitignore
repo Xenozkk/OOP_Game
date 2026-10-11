@@ -1,0 +1,10 @@
+# Compiled Java class files
+bin/
+*.class
+
+# macOS system files
+.DS_Store
+
+# Temporary files
+*.tmp
+*.log
