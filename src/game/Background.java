@@ -46,17 +46,24 @@ public class Background {
             imagePath = "assets/backgrounds/Cave_04.png";
         }
 
-        try {
-            BufferedImage fullImage = ImageIO.read(new File(imagePath));
-            
-            // ตัดภาพพื้นเป็น Tile ขนาด 64x64 พิกเซล
-            groundTile = fullImage.getSubimage(
-                0, TILE_SIZE, TILE_SIZE, TILE_SIZE
-            );
+        String[] fallbackPaths = {
+            imagePath,
+            "/Users/xenoz/Game_OOP/" + imagePath,
+            System.getProperty("user.dir") + "/" + imagePath
+        };
 
-        } catch (IOException | RuntimeException e) {
-            e.printStackTrace();
+        for (String p : fallbackPaths) {
+            try {
+                File f = new File(p);
+                if (f.exists()) {
+                    BufferedImage fullImage = ImageIO.read(f);
+                    // ตัดภาพพื้นเป็น Tile ขนาด 64x64 พิกเซล
+                    groundTile = fullImage.getSubimage(0, TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    return;
+                }
+            } catch (Exception ignored) {}
         }
+        System.err.println("Unable to load map image: " + imagePath);
     }
 
     // เมธอดสำหรับวาดฉากลงจอ 

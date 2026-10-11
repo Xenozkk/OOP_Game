@@ -41,14 +41,28 @@ public class Sword extends Weapon {
     }
 
     private void loadImage() {
-        try (InputStream resource = Sword.class.getResourceAsStream(
-                "/assets/weapons/sword.png")) {
-            swordImage = resource != null
-                ? ImageIO.read(resource)
-                : ImageIO.read(new File("assets/weapons/sword.png"));
-        } catch (IOException e) {
-            System.err.println("Unable to load sword image");
+        try (InputStream resource = Sword.class.getResourceAsStream("/assets/weapons/sword.png")) {
+            if (resource != null) {
+                swordImage = ImageIO.read(resource);
+                return;
+            }
+        } catch (Exception ignored) {}
+
+        String[] fallbackPaths = {
+            "assets/weapons/sword.png",
+            "/Users/xenoz/Game_OOP/assets/weapons/sword.png",
+            System.getProperty("user.dir") + "/assets/weapons/sword.png"
+        };
+        for (String p : fallbackPaths) {
+            try {
+                File f = new File(p);
+                if (f.exists()) {
+                    swordImage = ImageIO.read(f);
+                    return;
+                }
+            } catch (Exception ignored) {}
         }
+        System.err.println("Unable to load sword image");
     }
 
     @Override

@@ -492,12 +492,25 @@ public class GamePanel extends JPanel implements Runnable {
             if (resource != null) {
                 return ImageIO.read(resource);
             }
+        } catch (Exception ignored) {}
 
-            return ImageIO.read(new File(assetPath.substring(1)));
-        } catch (IOException e) {
-            System.err.println("Unable to load menu image: " + assetPath);
-            return null;
+        String clean = assetPath.startsWith("/") ? assetPath.substring(1) : assetPath;
+        String[] fallbackPaths = {
+            clean,
+            "/Users/xenoz/Game_OOP/" + clean,
+            System.getProperty("user.dir") + "/" + clean
+        };
+        for (String p : fallbackPaths) {
+            try {
+                File f = new File(p);
+                if (f.exists()) {
+                    return ImageIO.read(f);
+                }
+            } catch (Exception ignored) {}
         }
+
+        System.err.println("Unable to load menu image: " + assetPath);
+        return null;
     }
 
     private BufferedImage loadSwordSelectionImage() {
@@ -606,9 +619,12 @@ public class GamePanel extends JPanel implements Runnable {
         
         if (knightImage == null) {
             BufferedImage sheet = loadAsset("/assets/characters/knight_sheet.png");
-            if (sheet != null && sheet.getWidth() >= 480
-                    && sheet.getHeight() >= 448) {
-                knightImage = sheet.getSubimage(448, 416, 32, 32);
+            if (sheet != null) {
+                if (sheet.getWidth() >= 480 && sheet.getHeight() >= 448) {
+                    knightImage = sheet.getSubimage(448, 416, 32, 32);
+                } else {
+                    knightImage = sheet.getSubimage(0, 0, 32, 32);
+                }
             }
         }
 
